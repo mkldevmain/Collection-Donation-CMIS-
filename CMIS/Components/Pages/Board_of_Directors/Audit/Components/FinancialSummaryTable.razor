@@ -1,0 +1,138 @@
+@using CMIS.Store.Audit
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudCard Elevation="0" Class="premium-card mt-6">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <div class="d-flex align-center justify-space-between">
+                <h3 class="report-title">Finalized Financial Summary</h3>
+                <div class="d-flex gap-2">
+                    <MudTextField @bind-Value="_searchString" Placeholder="Search summaries..." Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Small" Class="mt-0" />
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.FileDownload" Color="Color.Primary" Size="Size.Small" OnClick="ExportData">Export</MudButton>
+                </div>
+            </div>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudTable Items="@Summaries" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" FixedHeader="true" Height="400px">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>Period</MudTh>
+                <MudTh>Total Income</MudTh>
+                <MudTh>Total Expenses</MudTh>
+                <MudTh>Net Balance</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Finalized By</MudTh>
+                <MudTh>Date</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.Id</MudTd>
+                <MudTd DataLabel="Period">@context.Period</MudTd>
+                <MudTd DataLabel="Total Income">@context.TotalIncome.ToString("C")</MudTd>
+                <MudTd DataLabel="Total Expenses">@context.TotalExpenses.ToString("C")</MudTd>
+                <MudTd DataLabel="Net Balance">
+                    <MudText Color="@(context.NetBalance >= 0 ? Color.Success : Color.Error)" Typo="Typo.body2">
+                        @context.NetBalance.ToString("C")
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small" Variant="Variant.Text">@context.Status</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Finalized By">@context.GeneratedBy</MudTd>
+                <MudTd DataLabel="Date">@context.FinalizationDate.ToShortDateString()</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public IEnumerable<FinancialSummary> Summaries { get; set; } = new List<FinancialSummary>();
+    
+    private string _searchString = "";
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Finalized" => Color.Info,
+        "Audited" => Color.Success,
+        "Archived" => Color.Default,
+        _ => Color.Default
+    };
+
+    private async Task ExportData()
+    {
+        if (!Summaries.Any())
+        {
+            Snackbar.Add("No data available to export.", Severity.Warning);
+            return;
+        }
+
+        var fileName = $"CMIS_Financial_Summary_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+
+        var dataJson = System.Text.Json.JsonSerializer.Serialize(Summaries.Select(s => new {
+            ID = s.Id,
+            Period = s.Period,
+            Income = s.TotalIncome.ToString("N2"),
+            Expenses = s.TotalExpenses.ToString("N2"),
+            Net = s.NetBalance.ToString("N2"),
+            Status = s.Status,
+            By = s.GeneratedBy,
+            Date = s.FinalizationDate.ToString("yyyy-MM-dd")
+        }));
+
+        var jsCode = $@"
+            var generateTablePdf = function() {{
+                const {{ jsPDF }} = window.jspdf;
+                const doc = new jsPDF('landscape');
+                
+                doc.setFontSize(16);
+                doc.setTextColor(13, 33, 55);
+                doc.text('CMIS Finalized Financial Summary', 14, 20);
+                
+                var rawData = {dataJson};
+                var body = rawData.map(item => [
+                    item.ID, item.Period, 'P ' + item.Income, 'P ' + item.Expenses, 'P ' + item.Net, item.Status, item.By, item.Date
+                ]);
+
+                doc.autoTable({{
+                    startY: 30,
+                    head: [['ID', 'Period', 'Total Income', 'Total Expenses', 'Net Balance', 'Status', 'Finalized By', 'Date']],
+                    body: body,
+                    theme: 'grid',
+                    headStyles: {{ fillColor: [13, 33, 55] }},
+                    styles: {{ fontSize: 10, cellPadding: 3 }},
+                    didParseCell: function(data) {{
+                        if(data.section === 'body' && data.column.index === 4) {{
+                            var val = data.cell.raw;
+                            if (val && !val.includes('-')) {{
+                                data.cell.styles.textColor = [0, 128, 0];
+                            }} else if (val && val.includes('-')) {{
+                                data.cell.styles.textColor = [255, 0, 0];
+                            }}
+                        }}
+                    }}
+                }});
+                
+                doc.save('{fileName}');
+            }};
+
+            if (typeof window.jspdf === 'undefined') {{
+                var s1 = document.createElement('script');
+                s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                s1.onload = function() {{
+                    var s2 = document.createElement('script');
+                    s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js';
+                    s2.onload = generateTablePdf;
+                    document.head.appendChild(s2);
+                }};
+                document.head.appendChild(s1);
+            }} else {{
+                generateTablePdf();
+            }}
+        ";
+
+        await JS.InvokeVoidAsync("eval", jsCode);
+        Snackbar.Add($"Downloading PDF: {fileName}", Severity.Success);
+    }
+}

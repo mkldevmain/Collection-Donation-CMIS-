@@ -1,0 +1,214 @@
+@using CMIS.Data
+@using CMIS.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+
+<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13, 33, 55, 0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
+    <div style="background: white; width: 100%; max-width: 650px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-height: 90vh;">
+        
+        <div style="padding: 1.5rem; border-bottom: 1px solid #e8ecf1; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div style="background: #0d2137; color: white; width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.3rem; color: #0d2137;">@(EditDistrictId.HasValue ? "Edit District" : "Create New District")</h2>
+                    <p style="margin: 0; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: #6b7c93;">@(EditDistrictId.HasValue ? "Update the district information below" : "Add a new district to your organization")</p>
+                </div>
+            </div>
+            <button type="button" @onclick="OnClose" style="background: transparent; border: none; cursor: pointer; color: #6b7c93; padding: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div style="padding: 1.5rem; overflow-y: auto; font-family: 'Inter', sans-serif;">
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.5rem; font-family: 'Inter', sans-serif;">District Image</label>
+                <div style="border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 8px; padding: 2.2rem; text-align: center; cursor: pointer; transition: background 0.2s ease;">
+                    <div style="display: inline-flex; background: white; padding: 0.8rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 0.8rem;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7c93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div style="font-family: 'Inter', sans-serif; font-weight: 700; color: #0d2137; font-size: 0.95rem; margin-bottom: 0.3rem;">Click to upload district image</div>
+                    <div style="font-family: 'Inter', sans-serif; color: #94a3b8; font-size: 0.75rem;">PNG, JPG up to 10MB</div>
+                </div>
+            </div>
+
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">District Name *</label>
+                    <input type="text" @bind="newDistrict.DistrictName" placeholder="e.g., District 1" style="width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">Location *</label>
+                    <input type="text" @bind="newDistrict.Address" placeholder="e.g., Lupi, Camarines Sur" style="width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">Established Date *</label>
+                    <input type="date" @bind="establishedDate" style="width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">District Head *</label>
+                    <select @bind="selectedProfileId" style="width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 6px; background: white;">
+                        <option value="0">-- Select a Head --</option>
+                        @foreach (var leader in existingLeaders)
+                        {
+                            <option value="@leader.ProfileId">@leader.FirstName @leader.LastName</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 0.5rem;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">Description (Optional)</label>
+                <textarea @bind="descriptionInput" 
+                        placeholder="Brief description about the district..." 
+                        rows="4" 
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-family: 'Inter', sans-serif; resize: vertical;"></textarea>
+            </div>
+        </div>
+        <div style="padding: 1.2rem 1.5rem; border-top: 1px solid #e8ecf1; display: flex; justify-content: flex-end; gap: 0.8rem; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+            <button type="button" @onclick="OnClose" style="padding: 0.6rem 1.2rem; background: white; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-weight: 600; cursor: pointer;">Cancel</button>
+            <button type="button" @onclick="SaveDistrict" style="padding: 0.6rem 1.2rem; background: #0d2137; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">@(EditDistrictId.HasValue ? "Update District" : "Create District")</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSuccess { get; set; }
+    [Parameter] public int? EditDistrictId { get; set; }
+
+    private District newDistrict = new();
+    private DateTime? establishedDate = DateTime.Now;
+    private int selectedProfileId = 0;
+    private string descriptionInput = "";
+    
+    private List<Profile> existingLeaders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var validRoles = new List<int> { 1, 2, 4, 5 };
+        
+        // FIX for CS0411: Explicitly tell the compiler we want a List of Profiles
+        existingLeaders = await Db.Profiles
+            .Join(Db.Accounts, 
+                  p => p.ProfileId, 
+                  a => a.ProfileId, 
+                  (p, a) => new { Profile = p, Account = a })
+            .Where(joined => validRoles.Contains(joined.Account.RoleId) && joined.Profile.ProfileStatus == "Active")
+            .Select(joined => joined.Profile)
+            .ToListAsync<Profile>(); 
+
+        if (EditDistrictId.HasValue)
+        {
+            var existingDistrict = await Db.Districts
+                .Include(d => d.LeadershipAssignments)
+                .FirstOrDefaultAsync(d => d.DistrictId == EditDistrictId.Value);
+
+            if (existingDistrict != null)
+            {
+                newDistrict.DistrictName = existingDistrict.DistrictName;
+                newDistrict.Address = existingDistrict.Address;
+                descriptionInput = existingDistrict.Description ?? "";
+                
+                var activeLeader = existingDistrict.LeadershipAssignments
+                    .FirstOrDefault(la => la.RoleId == 2 && la.Status == "Active");
+                    
+                if (activeLeader != null)
+                {
+                    selectedProfileId = activeLeader.ProfileId;
+                    establishedDate = activeLeader.AssignedDate;
+                }
+            }
+        }
+    }
+
+    private async Task SaveDistrict()
+    {
+        if (string.IsNullOrWhiteSpace(newDistrict.DistrictName) || string.IsNullOrWhiteSpace(newDistrict.Address) || selectedProfileId == 0)
+        {
+            // Basic validation
+            return;
+        }
+
+        if (EditDistrictId.HasValue)
+        {
+            var dbDistrict = await Db.Districts
+                .Include(d => d.LeadershipAssignments)
+                .FirstOrDefaultAsync(d => d.DistrictId == EditDistrictId.Value);
+
+            if (dbDistrict != null)
+            {
+                dbDistrict.DistrictName = newDistrict.DistrictName;
+                dbDistrict.Address = newDistrict.Address;
+                dbDistrict.Description = descriptionInput;
+
+                var currentLeader = dbDistrict.LeadershipAssignments
+                    .FirstOrDefault(la => la.RoleId == 2 && la.Status == "Active");
+
+                if (currentLeader?.ProfileId != selectedProfileId)
+                {
+                    if (currentLeader != null)
+                    {
+                        currentLeader.Status = "Inactive";
+                    }
+
+                    var newAssignment = new LeadershipAssignment
+                    {
+                        ProfileId = selectedProfileId,
+                        DistrictId = dbDistrict.DistrictId,
+                        RoleId = 2,
+                        AssignedDate = establishedDate ?? DateTime.Now,
+                        Status = "Active"
+                    };
+                    Db.LeadershipAssignments.Add(newAssignment);
+
+                    var newLeaderAccount = await Db.Accounts
+                        .FirstOrDefaultAsync(a => a.ProfileId == selectedProfileId);
+                    if (newLeaderAccount != null)
+                    {
+                        newLeaderAccount.RoleId = 2;
+                    }
+                }
+            }
+        }
+        else
+        {
+            newDistrict.DistrictCode = $"DST-{DateTime.Now.Ticks.ToString().Substring(0, 8)}";
+            newDistrict.Status = "Active";
+            newDistrict.Description = descriptionInput;
+
+            Db.Districts.Add(newDistrict);
+            await Db.SaveChangesAsync(); 
+
+            // STEP 2: Create the new Job Assignment
+            var assignment = new LeadershipAssignment
+            {
+                ProfileId = selectedProfileId,
+                DistrictId = newDistrict.DistrictId,
+                RoleId = 2,
+                AssignedDate = establishedDate ?? DateTime.Now,
+                Status = "Active"
+            };
+            Db.LeadershipAssignments.Add(assignment);
+
+            // STEP 3: UPDATE THE ACCOUNT ROLE (The "Promotion")
+            var userAccount = await Db.Accounts
+                .FirstOrDefaultAsync(a => a.ProfileId == selectedProfileId);
+
+            if (userAccount != null)
+            {
+                userAccount.RoleId = 2;
+            }
+        }
+
+        await Db.SaveChangesAsync(); // Saves both the assignment and the account update
+        await OnSuccess.InvokeAsync();
+    }
+}

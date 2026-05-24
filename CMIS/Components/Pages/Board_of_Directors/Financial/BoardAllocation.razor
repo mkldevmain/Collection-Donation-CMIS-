@@ -1,0 +1,529 @@
+@page "/board-of-directors/financial/allocation"
+@layout CMIS.Components.Layout.DashboardLayout
+@using CMIS.Data
+@using CMIS.Models
+@using CMIS.Services.FinancialApi
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@inject IFinancialApiClient FinancialApi
+@rendermode InteractiveServer
+
+<PageTitle>Budget Allocation — Board of Directors</PageTitle>
+
+<div style="margin-bottom:1.5rem;">
+    <h1 style="font-family:'Outfit',sans-serif;font-weight:800;font-size:1.65rem;color:#0d2137;margin:0 0 0.3rem;">Financial Management</h1>
+    <p style="font-family:'Inter',sans-serif;font-size:0.88rem;color:#6b7c93;margin:0;">Manage budgets, track expenses, and monitor financial health.</p>
+</div>
+
+<!-- Tab Bar -->
+<div style="display:flex;gap:0;border-bottom:2px solid #e8ecf1;margin-bottom:1.25rem;">
+    <a href="/board-of-directors/financial/proposals" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Budget Proposals</a>
+    <a href="/board-of-directors/financial/transactions" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Transactions</a>
+    <a href="/board-of-directors/financial/allocation" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#0d2137;text-decoration:none;border-bottom:2px solid #0d2137;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Budget Allocation</a>
+    <a href="/board-of-directors/financial/monitoring" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Monitoring</a>
+    <a href="/board-of-directors/financial/reports" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Reports</a>
+</div>
+
+<!-- Wallet Widget -->
+@{
+    var currentYear = DateTime.Now.Year;
+    var currentBudgetIds = nationalBudgets.Where(b => b.StartYear <= currentYear && b.EndYear >= currentYear).Select(b => b.BudgetId).ToHashSet();
+    var walletTotal = nationalBudgets.Where(b => b.StartYear <= currentYear && b.EndYear >= currentYear).Sum(b => b.TotalAmount);
+    var walletAllocated = nationalAllocs.Where(a => a.BudgetId.HasValue && currentBudgetIds.Contains(a.BudgetId.Value)).Sum(a => a.Allocated);
+    var walletSpent = nationalAllocs.Where(a => a.BudgetId.HasValue && currentBudgetIds.Contains(a.BudgetId.Value)).Sum(a => a.Spent);
+    var expiredBudgetIds = nationalBudgets.Where(b => b.EndYear < currentYear).Select(b => b.BudgetId).ToHashSet();
+    var priorYearSpent = nationalAllocs.Where(a => a.BudgetId.HasValue && expiredBudgetIds.Contains(a.BudgetId.Value)).Sum(a => a.Spent);
+    var priorYearRemaining = nationalBudgets.Where(b => b.EndYear < currentYear).Sum(b => b.TotalAmount) - priorYearSpent;
+    var walletAvailable = walletTotal - walletSpent + priorYearRemaining;
+}
+<div style="background:linear-gradient(135deg,#0d2137 0%,#1a3a5c 55%,#0d3060 100%);border-radius:16px;padding:1.6rem 2rem;margin-bottom:2rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;box-shadow:0 4px 24px rgba(13,33,55,0.2);position:relative;overflow:hidden;">
+    <div style="position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.05);pointer-events:none;"></div>
+    <div style="position:absolute;right:60px;bottom:-60px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
+    <div style="display:flex;align-items:center;gap:1.5rem;flex:1;min-width:0;position:relative;">
+        <div style="background:rgba(255,255,255,0.12);border-radius:14px;padding:1rem;flex-shrink:0;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3.5v3M8 3.5v3"/><circle cx="17" cy="14" r="1.5" fill="white" stroke="none"/></svg>
+        </div>
+        <div>
+            <div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;">Available Balance</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:2.2rem;color:#fff;line-height:1;">$@walletAvailable.ToString("N0")</div>
+            @if (priorYearRemaining > 0)
+            {
+                <div style="font-family:'Inter',sans-serif;font-size:0.7rem;color:rgba(150,220,180,0.85);margin-top:0.25rem;">+ $@priorYearRemaining.ToString("N0") prior year rollover</div>
+            }
+            <div style="font-family:'Inter',sans-serif;font-size:0.72rem;color:rgba(255,255,255,0.45);margin-top:0.25rem;">@DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+    </div>
+    <div style="width:1px;height:70px;background:rgba(255,255,255,0.15);flex-shrink:0;position:relative;"></div>
+    <div style="display:flex;gap:2.5rem;flex-shrink:0;position:relative;">
+        <div style="text-align:center;">
+            <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Total Budget</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.2rem;color:#fff;">$@walletTotal.ToString("N0")</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Allocated</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.2rem;color:#f0c040;">$@walletAllocated.ToString("N0")</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Spent</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.2rem;color:#e07070;">$@walletSpent.ToString("N0")</div>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+    <div>
+        <h2 style="font-family:'Outfit',sans-serif;font-weight:800;font-size:1.3rem;color:#0d2137;margin:0 0 0.2rem;">National Budgets</h2>
+        <p style="font-family:'Inter',sans-serif;font-size:0.8rem;color:#6b7c93;margin:0;">National-level budgets under board oversight.</p>
+    </div>
+    <div style="display:flex;gap:0.65rem;">
+        <button @onclick="OpenCreateBudgetModal" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1.2rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:700;color:#0d2137;background:#fff;border:1.5px solid #0d2137;border-radius:8px;cursor:pointer;white-space:nowrap;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create Budget
+        </button>
+        <button @onclick="OpenBudgetModal" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1.2rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:700;color:#fff;background:#0d2137;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">
+            + Allocate Budget
+        </button>
+    </div>
+</div>
+
+<!-- Budgets Section -->
+<div style="margin-top:1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <h3 style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.05rem;color:#0d2137;margin:0;">Budgets</h3>
+        <span style="font-family:'Inter',sans-serif;font-size:0.75rem;color:#8e99a4;">@nationalBudgets.Count budget(s)</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e8ecf1;border-radius:12px;padding:1.2rem;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:0.84rem;table-layout:fixed;">
+            <colgroup><col style="width:11%"/><col style="width:29%"/><col style="width:14%"/><col style="width:14%"/><col style="width:14%"/><col style="width:18%"/></colgroup>
+            <thead>
+                <tr>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Date</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Name</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Fiscal Year</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Total</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Allocated</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Remaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in pagedBudgets)
+                {
+                    var bAllocated = nationalAllocs.Where(a => a.BudgetId == b.BudgetId).Sum(a => a.Allocated);
+                    var bRemaining = b.TotalAmount - bAllocated;
+                    var bRemColor = bRemaining < 0 ? "#c0392b" : "#1e8449";
+                    <tr style="border-bottom:1px solid #f0f3f6;">
+                        <td style="padding:0.7rem 0.8rem;color:#8e99a4;font-size:0.8rem;">@b.CreatedAt.ToString("M/d/yyyy")</td>
+                        <td style="padding:0.7rem 0.8rem;font-weight:600;color:#0d2137;">@b.Name</td>
+                        <td style="padding:0.7rem 0.8rem;color:#6b7c93;">@b.FiscalYear</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#0d2137;">$@b.TotalAmount.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#1a5276;">$@bAllocated.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;font-weight:700;color:@bRemColor;">$@bRemaining.ToString("N0")</td>
+                    </tr>
+                }
+                @if (!nationalBudgets.Any())
+                {
+                    <tr><td colspan="6" style="padding:2.5rem 1rem;text-align:center;color:#8e99a4;font-style:italic;">No national budgets found. Create one to get started.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (budgTotalPages > 1)
+{
+    <div style="display:flex;justify-content:center;padding:0.75rem 0 0.25rem;">
+        <MudPagination Count="@budgTotalPages" @bind-Selected="budgPage" Color="Color.Primary" Size="Size.Small" />
+    </div>
+}
+
+<!-- Budget Allocations Section -->
+<div style="margin-top:1.25rem;margin-bottom:1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <h3 style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.05rem;color:#0d2137;margin:0;">Budget Allocations</h3>
+        <span style="font-family:'Inter',sans-serif;font-size:0.75rem;color:#8e99a4;">@activeAllocs.Count() allocation(s)</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e8ecf1;border-radius:12px;padding:1.2rem;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:0.84rem;table-layout:fixed;">
+            <colgroup><col style="width:36%"/><col style="width:22%"/><col style="width:22%"/><col style="width:20%"/></colgroup>
+            <thead>
+                <tr>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Name</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Allocated</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Spent</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in pagedAllocs)
+                {
+                    var balance = a.Allocated - a.Spent;
+                    var balColor = balance < 0 ? "#c0392b" : "#1e8449";
+                    <tr style="border-bottom:1px solid #f0f3f6;">
+                        <td style="padding:0.7rem 0.8rem;font-weight:600;color:#0d2137;">@a.Name</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#0d2137;">$@a.Allocated.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#c0392b;">$@a.Spent.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;font-weight:700;color:@balColor;">$@balance.ToString("N0")</td>
+                    </tr>
+                }
+                @if (!nationalAllocs.Any())
+                {
+                    <tr><td colspan="4" style="padding:2.5rem 1rem;text-align:center;color:#8e99a4;font-style:italic;">No budget allocations found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (allocTotalPages > 1)
+{
+    <div style="display:flex;justify-content:center;padding:0.75rem 0 0.25rem;">
+        <MudPagination Count="@allocTotalPages" @bind-Selected="allocPage" Color="Color.Primary" Size="Size.Small" />
+    </div>
+}
+
+@if (showCreateBudgetModal)
+{
+    <div class="modal-overlay" @onclick="CloseCreateBudgetModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <h2 class="modal-title">Create Budget</h2>
+            <div class="modal-field">
+                <label class="modal-label">Budget Name</label>
+                <input type="text" class="modal-input" placeholder="e.g. National Ministry Fund 2026" @bind="createBudgetName" />
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Level</label>
+                <select class="modal-input" @bind="createBudgetLevel">
+                    <option value="National">National</option>
+                    <option value="District">District</option>
+                    <option value="Church">Church</option>
+                </select>
+            </div>
+            @if (createBudgetLevel == "District")
+            {
+                <div class="modal-field">
+                    <label class="modal-label">District</label>
+                    <select class="modal-input" @bind="createBudgetDistrictId">
+                        <option value="0">— Select District —</option>
+                        @foreach (var d in districts)
+                        {
+                            <option value="@d.DistrictId">@d.DistrictName</option>
+                        }
+                    </select>
+                </div>
+            }
+            @if (createBudgetLevel == "Church")
+            {
+                <div class="modal-field">
+                    <label class="modal-label">Church</label>
+                    <select class="modal-input" @bind="createBudgetChurchId">
+                        <option value="0">— Select Church —</option>
+                        @foreach (var c in churches)
+                        {
+                            <option value="@c.ChurchId">@c.ChurchName (@c.District?.DistrictName)</option>
+                        }
+                    </select>
+                </div>
+            }
+            @if (createBudgetLevel != "National")
+            {
+                var activeNationalBudgets = nationalBudgets.Where(b => b.StartYear <= DateTime.Now.Year && b.EndYear >= DateTime.Now.Year).ToList();
+                <div class="modal-field">
+                    <label class="modal-label">Link to National Budget <span style="font-weight:400;color:#8e99a4;">(active budgets only)</span></label>
+                    <select class="modal-input" @bind="createBudgetNationalBudgetId">
+                        <option value="0">— Select National Budget —</option>
+                        @foreach (var b in activeNationalBudgets)
+                        {
+                            <option value="@b.BudgetId">@b.Name (@b.FiscalYear)</option>
+                        }
+                    </select>
+                </div>
+                @if (createBudgetNationalBudgetId != 0)
+                {
+                    var selBudget = nationalBudgets.FirstOrDefault(b => b.BudgetId == createBudgetNationalBudgetId);
+                    var alreadyAllocated = nationalAllocs.Where(a => a.BudgetId == createBudgetNationalBudgetId).Sum(a => a.Allocated);
+                    var availForAlloc = (selBudget?.TotalAmount ?? 0) - alreadyAllocated;
+                    var availColor = availForAlloc <= 0 ? "#c0392b" : availForAlloc < createBudgetAmount ? "#e67e22" : "#1e8449";
+                    <div style="background:#f5f7fa;border:1px solid #e8ecf1;border-radius:8px;padding:0.65rem 0.9rem;margin-bottom:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-family:'Inter',sans-serif;font-size:0.75rem;color:#6b7c93;">Available for allocation</span>
+                        <span style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1rem;color:@availColor;">$@availForAlloc.ToString("N2")</span>
+                    </div>
+                }
+            }
+            @if (createBudgetLevel == "National")
+            {
+                var natAvailColor = WalletAvailable <= 0 ? "#c0392b" : WalletAvailable < createBudgetAmount ? "#e67e22" : "#1e8449";
+                <div style="background:#f5f7fa;border:1px solid #e8ecf1;border-radius:8px;padding:0.65rem 0.9rem;margin-bottom:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-family:'Inter',sans-serif;font-size:0.75rem;color:#6b7c93;">Available wallet balance</span>
+                    <span style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1rem;color:@natAvailColor;">$@WalletAvailable.ToString("N2")</span>
+                </div>
+            }
+            <div class="modal-field" style="display:flex;gap:0.75rem;">
+                <div style="flex:1;">
+                    <label class="modal-label">Start Year</label>
+                    <input type="number" class="modal-input" min="2000" max="2100" @bind="createBudgetStartYear" />
+                </div>
+                <div style="flex:1;">
+                    <label class="modal-label">End Year</label>
+                    <input type="number" class="modal-input" min="2001" max="2101" @bind="createBudgetEndYear" />
+                </div>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Total Amount ($)</label>
+                <input type="number" class="modal-input" step="0.01" min="0" placeholder="0.00" @bind="createBudgetAmount" />
+            </div>
+            @if (!string.IsNullOrEmpty(createBudgetError))
+            {
+                <p class="modal-error">@createBudgetError</p>
+            }
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" @onclick="CloseCreateBudgetModal">Cancel</button>
+                <button class="modal-btn-save" @onclick="SaveCreateBudget" disabled="@isSavingCreateBudget">
+                    @(isSavingCreateBudget ? "Saving..." : "Create Budget")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showBudgetModal)
+{
+    <div class="modal-overlay" @onclick="CloseBudgetModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <h2 class="modal-title">Allocate Budget</h2>
+            <div class="modal-field">
+                <label class="modal-label">Budget</label>
+                <select class="modal-input" @bind="budgetModalBudgetId">
+                    <option value="0">— Select Budget —</option>
+                    @foreach (var b in activeBudgets)
+                    {
+                        <option value="@b.BudgetId">@b.Name (@b.FiscalYear)</option>
+                    }
+                </select>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Allocation Name</label>
+                <input type="text" class="modal-input" placeholder="e.g. Outreach Program" @bind="budgetModalName" />
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Allocated Amount ($)</label>
+                <input type="number" class="modal-input" step="0.01" min="0" placeholder="0.00" @bind="budgetModalAmount" />
+            </div>
+            @if (!string.IsNullOrEmpty(budgetModalError))
+            {
+                <p class="modal-error">@budgetModalError</p>
+            }
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" @onclick="CloseBudgetModal">Cancel</button>
+                <button class="modal-btn-save" @onclick="SaveAllocateBudget" disabled="@isSavingBudget">
+                    @(isSavingBudget ? "Saving..." : "Allocate Budget")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<BudgetReadDto> nationalBudgets = new();
+    private List<BudgetAllocationReadDto> nationalAllocs = new();
+
+    private IEnumerable<BudgetReadDto> activeBudgets => nationalBudgets.Where(b => b.EndYear >= DateTime.Now.Year);
+
+    private decimal WalletAvailable
+    {
+        get
+        {
+            var yr = DateTime.Now.Year;
+            var curIds = nationalBudgets.Where(b => b.StartYear <= yr && b.EndYear >= yr).Select(b => b.BudgetId).ToHashSet();
+            var expIds = nationalBudgets.Where(b => b.EndYear < yr).Select(b => b.BudgetId).ToHashSet();
+            var total = nationalBudgets.Where(b => curIds.Contains(b.BudgetId)).Sum(b => b.TotalAmount);
+            var spent = nationalAllocs.Where(a => a.BudgetId.HasValue && curIds.Contains(a.BudgetId.Value)).Sum(a => a.Spent);
+            var priorRemaining = nationalBudgets.Where(b => expIds.Contains(b.BudgetId)).Sum(b => b.TotalAmount)
+                               - nationalAllocs.Where(a => a.BudgetId.HasValue && expIds.Contains(a.BudgetId.Value)).Sum(a => a.Spent);
+            return total - spent + priorRemaining;
+        }
+    }
+
+    private int budgPage = 1;
+    private const int BudgPageSize = 10;
+    private int budgTotalPages => Math.Max(1, (int)Math.Ceiling((double)activeBudgets.Count() / BudgPageSize));
+    private List<BudgetReadDto> pagedBudgets => activeBudgets.Skip((budgPage - 1) * BudgPageSize).Take(BudgPageSize).ToList();
+
+    private int allocPage = 1;
+    private const int AllocPageSize = 10;
+    private IEnumerable<BudgetAllocationReadDto> activeAllocs => nationalAllocs.Where(a =>
+        a.BudgetId.HasValue && nationalBudgets.Any(b => b.BudgetId == a.BudgetId.Value && b.EndYear >= DateTime.Now.Year));
+    private int allocTotalPages => Math.Max(1, (int)Math.Ceiling((double)activeAllocs.Count() / AllocPageSize));
+    private List<BudgetAllocationReadDto> pagedAllocs => activeAllocs.Skip((allocPage - 1) * AllocPageSize).Take(AllocPageSize).ToList();
+
+    private List<District> districts = new();
+    private List<Church> churches = new();
+
+    private bool showCreateBudgetModal = false;
+    private bool isSavingCreateBudget = false;
+    private string createBudgetName = "";
+    private string createBudgetLevel = "National";
+    private int createBudgetDistrictId = 0;
+    private int createBudgetChurchId = 0;
+    private int createBudgetNationalBudgetId = 0;
+    private int createBudgetStartYear = DateTime.Now.Year;
+    private int createBudgetEndYear = DateTime.Now.Year + 1;
+    private decimal createBudgetAmount = 0;
+    private string createBudgetError = "";
+
+    private bool showBudgetModal = false;
+    private bool isSavingBudget = false;
+    private int budgetModalBudgetId = 0;
+    private string budgetModalName = "";
+    private decimal budgetModalAmount = 0;
+    private string budgetModalError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadData();
+    }
+
+    private async Task ReloadData()
+    {
+        var allBudgets = await FinancialApi.GetBudgetsAsync(level: "National");
+        nationalBudgets = allBudgets.OrderByDescending(b => b.TotalAmount).ToList();
+
+        var budgetIds = nationalBudgets.Select(b => b.BudgetId).ToHashSet();
+        if (budgetIds.Any())
+        {
+            var allAllocs = await FinancialApi.GetAllocationsAsync();
+            nationalAllocs = allAllocs
+                .Where(a => a.BudgetId.HasValue && budgetIds.Contains(a.BudgetId.Value))
+                .OrderBy(a => a.Name)
+                .ToList();
+        }
+        else
+        {
+            nationalAllocs = new();
+        }
+
+        districts = await Db.Districts.OrderBy(d => d.DistrictName).ToListAsync();
+        churches = await Db.Churches.Include(c => c.District).OrderBy(c => c.ChurchName).ToListAsync();
+    }
+
+    private void OpenCreateBudgetModal()
+    {
+        createBudgetName = "";
+        createBudgetLevel = "National";
+        createBudgetDistrictId = 0;
+        createBudgetChurchId = 0;
+        createBudgetNationalBudgetId = 0;
+        createBudgetStartYear = DateTime.Now.Year;
+        createBudgetEndYear = DateTime.Now.Year + 1;
+        createBudgetAmount = 0;
+        createBudgetError = "";
+        showCreateBudgetModal = true;
+    }
+    private void CloseCreateBudgetModal() { showCreateBudgetModal = false; createBudgetError = ""; }
+
+    private async Task SaveCreateBudget()
+    {
+        createBudgetError = "";
+        if (string.IsNullOrWhiteSpace(createBudgetName)) { createBudgetError = "Budget name is required."; return; }
+        if (createBudgetLevel == "District" && createBudgetDistrictId == 0) { createBudgetError = "Please select a district."; return; }
+        if (createBudgetLevel == "Church" && createBudgetChurchId == 0) { createBudgetError = "Please select a church."; return; }
+        if (createBudgetLevel != "National" && createBudgetNationalBudgetId == 0) { createBudgetError = "Please select a national budget to link to."; return; }
+        if (createBudgetStartYear < 2000 || createBudgetStartYear > 2100) { createBudgetError = "Enter a valid start year."; return; }
+        if (createBudgetEndYear <= createBudgetStartYear) { createBudgetError = "End year must be greater than start year."; return; }
+        if (createBudgetAmount <= 0) { createBudgetError = "Total amount must be greater than zero."; return; }
+
+        if (createBudgetLevel == "National" && createBudgetAmount > WalletAvailable)
+        {
+            createBudgetError = $"Amount exceeds the available wallet balance of ${WalletAvailable:N2}.";
+            return;
+        }
+
+        if (createBudgetLevel != "National")
+        {
+            var selBudget = nationalBudgets.FirstOrDefault(b => b.BudgetId == createBudgetNationalBudgetId);
+            var alreadyAllocated = nationalAllocs.Where(a => a.BudgetId == createBudgetNationalBudgetId).Sum(a => a.Allocated);
+            var availForAlloc = (selBudget?.TotalAmount ?? 0) - alreadyAllocated;
+            if (createBudgetAmount > availForAlloc)
+            {
+                createBudgetError = $"Amount exceeds the available balance of ${availForAlloc:N2} in the selected national budget.";
+                return;
+            }
+        }
+
+        isSavingCreateBudget = true;
+
+        try
+        {
+            await FinancialApi.CreateBudgetAsync(new BudgetWriteDto
+            {
+                Name = createBudgetName.Trim(),
+                StartYear = createBudgetStartYear,
+                EndYear = createBudgetEndYear,
+                TotalAmount = createBudgetAmount,
+                Level = createBudgetLevel,
+                DistrictId = createBudgetLevel == "District" ? createBudgetDistrictId : null,
+                ChurchId = createBudgetLevel == "Church" ? createBudgetChurchId : null
+            });
+
+            if (createBudgetLevel != "National")
+            {
+                var linkedEntity = createBudgetLevel == "District"
+                    ? districts.FirstOrDefault(d => d.DistrictId == createBudgetDistrictId)?.DistrictName
+                    : churches.FirstOrDefault(c => c.ChurchId == createBudgetChurchId)?.ChurchName;
+
+                await FinancialApi.CreateAllocationAsync(new BudgetAllocationWriteDto
+                {
+                    Name = $"{createBudgetName.Trim()} — {linkedEntity}",
+                    Allocated = createBudgetAmount,
+                    Spent = 0,
+                    BudgetId = createBudgetNationalBudgetId
+                });
+            }
+
+            await ReloadData();
+            showCreateBudgetModal = false;
+        }
+        catch (Exception ex)
+        {
+            createBudgetError = $"Save failed: {ex.Message}";
+        }
+        isSavingCreateBudget = false;
+    }
+
+    private void OpenBudgetModal()
+    {
+        budgetModalBudgetId = 0;
+        budgetModalName = "";
+        budgetModalAmount = 0;
+        budgetModalError = "";
+        showBudgetModal = true;
+    }
+    private void CloseBudgetModal() { showBudgetModal = false; budgetModalError = ""; }
+
+    private async Task SaveAllocateBudget()
+    {
+        budgetModalError = "";
+        if (budgetModalBudgetId == 0) { budgetModalError = "Please select a budget."; return; }
+        if (string.IsNullOrWhiteSpace(budgetModalName)) { budgetModalError = "Allocation name is required."; return; }
+        if (budgetModalAmount <= 0) { budgetModalError = "Amount must be greater than zero."; return; }
+
+        isSavingBudget = true;
+        try
+        {
+            await FinancialApi.CreateAllocationAsync(new BudgetAllocationWriteDto
+            {
+                Name = budgetModalName.Trim(),
+                Allocated = budgetModalAmount,
+                Spent = 0,
+                BudgetId = budgetModalBudgetId
+            });
+            await ReloadData();
+            showBudgetModal = false;
+        }
+        catch (Exception ex)
+        {
+            budgetModalError = $"Save failed: {ex.Message}";
+        }
+        isSavingBudget = false;
+    }
+}

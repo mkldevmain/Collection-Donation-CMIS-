@@ -1,0 +1,43 @@
+<!-- ===== NOT FOUND MODAL — Backdrop ===== -->
+<div class="wl-modal-backdrop @(IsAnimating ? "active" : "")" @onclick="HandleClose">
+    <div class="wl-modal-card @(IsAnimating ? "active" : "")" @onclick:stopPropagation>
+        <div class="wl-modal-body" id="modal-not-found">
+
+            <!-- Icon -->
+            <div class="wl-modal-icon-circle">
+                <i class="fi fi-sr-member-search wl-modal-icon" style="font-size: 2.5rem; color="#1B4173"></i>
+            </div>
+
+            <h2 class="wl-modal-heading">We couldn't find a record<br />with this information.</h2>
+            <p class="wl-modal-subtext">Please check in during your next visit or<br />create an initial account.</p>
+
+            <!-- Actions -->
+            <div class="wl-modal-actions">
+                <button class="wl-btn-secondary" id="btn-cancel" @onclick="HandleClose">
+                    CANCEL
+                </button>
+                <button class="wl-btn-primary" id="btn-initial-account" @onclick="HandleInitialAccount">
+                    INITIAL ACCOUNT
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M13 7L8 2M13 7L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>Controls the fade / scale-in animation state.</summary>
+    [Parameter]
+    public bool IsAnimating { get; set; }
+
+    /// <summary>Fired when the user clicks "CANCEL" or the backdrop.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Fired when the user clicks "INITIAL ACCOUNT" to create a new account.</summary>
+    [Parameter]
+    public EventCallback OnInitialAccount { get; set; }
+
+    private async Task HandleClose() => await OnClose.InvokeAsync();
+    private async Task HandleInitialAccount() => await OnInitialAccount.InvokeAsync();
+}

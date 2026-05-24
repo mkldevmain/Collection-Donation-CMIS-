@@ -1,0 +1,192 @@
+@inherits LayoutComponentBase
+@using CMIS.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="dashboard">
+    <!-- Sidebar -->
+    @* Primary: RBAC-aware Sidebar component (feature/membership) *@
+    <CMIS.Components.Layout.Sidebar IsOpen="sidebarOpen" />
+
+    @* Fallback: inline sidebar (develop/HEAD) - kept for reference
+    <aside class="sidebar @(sidebarOpen ? "open" : "")">
+        ... (old inline sidebar preserved in git history)
+    </aside>
+    *@
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay @(sidebarOpen ? "visible" : "")" @onclick="() => sidebarOpen = false"></div>
+
+    <!-- Main content -->
+    <div class="dashboard-main">
+        <!-- Top header -->
+        <header class="top-header">
+            <button class="hamburger" @onclick="() => sidebarOpen = !sidebarOpen" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h2 class="header-title">@CurrentPageTitle</h2>
+            <div class="header-right">
+                <button class="notif-btn" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="notif-badge">1</span>
+                </button>
+                <div class="user-info">
+                    <i class="fas fa-user-circle" style="font-size: 20px;"></i>
+                    <span class="user-name">@RoleDisplayName</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page content -->
+        <main class="page-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private bool sidebarOpen = false;
+    private bool showRoleDropdown = false;
+    private string roleName = "";
+    private string userEmail = "pastor@church.org";
+
+    private string RoleSlug => GetRoleSlug();
+    private string RoleDisplayName => !string.IsNullOrEmpty(roleName) ? roleName : GetRoleDisplayName(RoleSlug);
+
+    private string CurrentPageTitle
+    {
+        get
+        {
+            var path = Navigation.ToBaseRelativePath(Navigation.Uri).ToLower();
+            if (path.Contains("/financial") || path.Contains("/finance") || path.Contains("/budget")) return "Financial Management";
+            if (path.Contains("/membership")) return "Membership";
+            if (path.Contains("/collections")) return "Collection and Donation";
+            if (path.Contains("/event")) return "Event Management";
+            if (path.Contains("/appointments")) return "Appointments";
+            if (path.Contains("/schedule")) return "Configure Schedule";
+            if (path.Contains("/services")) return "Services";
+            return "Dashboard";
+        }
+    }
+
+    private EventHandler<Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs>? _locationChangedHandler;
+
+    protected override void OnInitialized()
+    {
+        _locationChangedHandler = (s, e) => InvokeAsync(StateHasChanged);
+        Navigation.LocationChanged += _locationChangedHandler;
+    }
+
+    public void Dispose()
+    {
+        if (_locationChangedHandler is not null)
+        {
+            Navigation.LocationChanged -= _locationChangedHandler;
+        }
+    }
+
+    private void ToggleRoleDropdown() => showRoleDropdown = !showRoleDropdown;
+
+    private void SelectRole(string role, string defaultPath)
+    {
+        roleName = role;
+        showRoleDropdown = false;
+        Navigation.NavigateTo(defaultPath);
+    }
+
+    private string GetRoleSlug()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri).ToLower();
+        if (path.StartsWith("head-pastor")) return "head-pastor";
+        if (path.StartsWith("district-head")) return "district-head";
+        if (path.StartsWith("leadership-council")) return "leadership-council";
+        if (path.StartsWith("board-of-directors")) return "board-of-directors";
+        if (path.StartsWith("bod")) return "board-of-directors";
+        return "ministry-head";
+    }
+
+    private string GetRoleDisplayName(string slug)
+    {
+        return slug switch
+        {
+            "head-pastor" => "Head Pastor",
+            "district-head" => "District Head",
+            "leadership-council" => "Leadership Council",
+            "board-of-directors" => "Board of Directors",
+            "bod" => "Board of Directors",
+            _ => "Ministry Head"
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+                if (user.Identity?.IsAuthenticated == true)
+                {
+                    var newRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                    if (!string.IsNullOrEmpty(newRole))
+                    {
+                        roleName = newRole;
+                    }
+                    userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+                    StateHasChanged();
+                }
+            }
+            catch { /* Session not available during prerender */ }
+        }
+    }
+
+    private void NavigateTo(string url)
+    {
+        sidebarOpen = false;
+        Navigation.NavigateTo(url, forceLoad: true);
+    }
+
+    private string IsActive(string href)
+    {
+        var uri = Navigation.Uri;
+        var relativePath = Navigation.ToBaseRelativePath(uri);
+        var path = "/" + relativePath;
+
+        if (href == $"/{RoleSlug}" && path == $"/{RoleSlug}")
+            return "active";
+
+        if (href != $"/{RoleSlug}" && path.StartsWith(href, StringComparison.OrdinalIgnoreCase))
+            return "active";
+
+        return "";
+    }
+
+    private string GetHeaderTitle()
+    {
+        var uri = Navigation.Uri;
+        var relativePath = Navigation.ToBaseRelativePath(uri);
+        
+        if (relativePath.Contains("audit", StringComparison.OrdinalIgnoreCase))
+            return "Financial Monitoring and Audit";
+            
+        if (relativePath.Contains("financial", StringComparison.OrdinalIgnoreCase))
+            return "Financial Management";
+            
+        return "Dashboard";
+    }
+
+    private async Task HandleSignOut()
+    {
+        var authProvider = (CustomAuthStateProvider)AuthStateProvider;
+        await authProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}

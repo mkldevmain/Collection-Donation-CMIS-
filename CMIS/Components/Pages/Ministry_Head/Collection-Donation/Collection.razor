@@ -1,0 +1,649 @@
+@page "/ministry-head/collections"
+@layout CMIS.Components.Layout.DashboardLayout
+@rendermode InteractiveServer
+@inject IFinancialService FinancialService
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@using CMIS.Models
+@using CMIS.Data
+@using CMIS.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using CMIS.Components.Pages.Ministry_Head.Collection_Donation
+
+<PageTitle>Collection and Donation — CMIS Portal</PageTitle>
+
+<div class="collection-root">
+    <!-- Page Heading -->
+    <div class="page-heading">
+        <h1 class="page-title">Collection and Donation</h1>
+        <p class="page-subtitle">Manage tithes, offerings, recurring donations, and church expenses.</p>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <button class="tab @(activeTab == "tithes" ? "active" : "")" @onclick='() => activeTab = "tithes"' id="tab-tithes">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Tithes &amp; Offerings
+        </button>
+
+        <button class="tab @(activeTab == "recurring" ? "active" : "")" @onclick='() => activeTab = "recurring"' id="tab-recurring">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Recurring Tithes
+        </button>
+        <button class="tab @(activeTab == "reports" ? "active" : "")" @onclick='() => activeTab = "reports"' id="tab-reports">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Reports
+        </button>
+    </div>
+
+    <!-- Authority Banner -->
+    <div class="authority-banner">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Your authority: Record and manage church donations and expenses. All income entries are <strong>automatically finalized</strong> upon submission.
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="sc-icon sc-icon-tithes">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="sc-info">
+                <span class="sc-label">Total Tithes</span>
+                <span class="sc-value">₱@totalTithes.ToString("N0")</span>
+                <span class="sc-trend trend-up">+12.5% this month</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon sc-icon-offerings">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div class="sc-info">
+                <span class="sc-label">Total Offerings</span>
+                <span class="sc-value">₱@totalOfferings.ToString("N0")</span>
+                <span class="sc-trend trend-up">+8.3% this month</span>
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="sc-icon sc-icon-balance">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <div class="sc-info">
+                <span class="sc-label">Net Balance</span>
+                <span class="sc-value net-positive">₱@netBalance.ToString("N0")</span>
+                <span class="sc-trend trend-up">Healthy</span>
+            </div>
+        </div>
+    </div>
+
+    @if (activeTab == "tithes")
+    {
+        <TithesOfferingsTab
+            FilteredTithes="@donations.Where(d => d.Type == "Tithe").ToList()"
+            FilteredOfferings="@donations.Where(d => d.Type == "Offering").ToList()"
+            FilteredDonations="@donations.Where(d => d.Type == "Donation").ToList()"
+            FilteredMembers="filteredMembers"
+            ShowDonorDropdown="showDonorDropdown"
+            @bind-NewDonor="newDonor"
+            @bind-NewType="newType"
+            @bind-NewNotes="newNotes"
+            @bind-NewAmount="newAmount"
+            @bind-NewDate="newDate"
+            OnSelectDonor="SelectDonor"
+            OnAddDonation="AddDonation"
+            OnClearForm="ClearForm"
+            OnBlur="HideDonorDropdownDelayed"
+            OnViewRecord="e => OpenViewModal(e.Id, e.DonorName, e.Amount, e.Date, e.Type, null)" />
+    }
+
+    @if (activeTab == "recurring")
+    {
+        <RecurringTithesTab
+            Schedules="recurringTithes"
+            Members="members"
+            OnRecordPayment="OpenRecordPaymentModal"
+            OnViewDetails="OpenRecurringDetailModal"
+            OnEditSchedule="OpenEditRecurringModal"
+            OnSaveSchedule="HandleSaveSchedule" />
+    }
+
+    @if (activeTab == "reports")
+    {
+        <ReportsTab
+            MonthlyData="monthlyData"
+            WeeklyData="weeklyData"
+            TotalIncome="totalTithes + totalOfferings"
+            NetBalance="netBalance"
+            Schedules="recurringTithes" />
+    }
+
+    <!-- Toast -->
+    @if (showToast)
+    {
+        <div class="toast @toastType">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            @toastMessage
+        </div>
+    }
+
+    @* MODALS *@
+    @if (showViewModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModals">
+            <div class="modal-content" @onclick:stopPropagation="true">
+                <h3 class="modal-title">Record Details</h3>
+                <div class="modal-body">
+                    <p><strong>ID:</strong> @viewModalData.Id</p>
+                    <p><strong>Entity Name/Title:</strong> @viewModalData.Name</p>
+                    <p><strong>Amount:</strong> ₱@viewModalData.Amount.ToString("N0")</p>
+                    <p><strong>Date:</strong> @viewModalData.Date.ToString("MMM dd, yyyy")</p>
+                    <p><strong>Category/Type:</strong> @viewModalData.Category</p>
+                    @if (!string.IsNullOrEmpty(viewModalData.RefNo))
+                    {
+                        <p><strong>Reference #:</strong> @viewModalData.RefNo</p>
+                    }
+                    <p><strong>Status:</strong> Finalized (Read-Only)</p>
+                </div>
+                <div class="modal-actions mt-4">
+                    <button class="btn-secondary" @onclick="CloseModals">Close</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showEditRecurringModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModals">
+            <div class="modal-content" @onclick:stopPropagation="true">
+                <h3 class="modal-title">Edit Recurring Schedule</h3>
+                <div class="modal-body">
+                    <p class="mb-4"><strong>Member:</strong> @editRecMemberName</p>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-input" @bind="editRecStatus">
+                            <option value="Active">Active</option>
+                            <option value="Paused">Paused</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount (₱)</label>
+                        <input type="number" class="form-input" @bind="editRecAmount" />
+                    </div>
+                </div>
+                <div class="modal-actions mt-4">
+                    <button class="btn-primary" @onclick="SaveRecurringEdit">Save Changes</button>
+                    <button class="btn-secondary" @onclick="CloseModals">Cancel</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showRecurringDetailModal && detailEntry != null)
+    {
+        <div class="modal-overlay" @onclick="CloseModals">
+            <div class="modal-content" style="max-width: 560px; width: 95%; border-radius: 16px; padding: 0; overflow: hidden;" @onclick:stopPropagation="true">
+                <!-- Modal Header -->
+                <div style="background: linear-gradient(135deg, #0d2137 0%, #1e3a5f 100%); padding: 24px 28px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: #fff; font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 700; margin: 0;">Recurring Schedule Details</h3>
+                        <p style="color: #a4b5c7; font-size: 0.82rem; margin: 4px 0 0;">Full schedule overview for @detailEntry.MemberName</p>
+                    </div>
+                    <span class="status-badge status-@detailEntry.Status.ToLower().Replace(" ","")">
+                        <span class="status-dot"></span>@detailEntry.Status
+                    </span>
+                </div>
+
+                <!-- Modal Body -->
+                <div style="padding: 24px 28px; background: #fff;">
+
+                    @if (detailEntry.TargetAmount.HasValue && detailEntry.TargetAmount > 0)
+                    {
+                        double pct = Math.Min(100, (double)(detailEntry.EstimatedPaid / detailEntry.TargetAmount.Value) * 100);
+
+                        <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 0.8rem; font-weight: 600; color: #6b7c93;">Payment Progress</span>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #0d2137;">@pct.ToString("F1")%</span>
+                            </div>
+                            <div style="background: #e2e8f0; border-radius: 999px; height: 8px; overflow: hidden;">
+                                <div style="height: 8px; border-radius: 999px; background: linear-gradient(90deg, #0d2137, #4071a5); width: @(pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+                                <span style="font-size: 0.75rem; color: #6b7c93;">Paid: ₱@detailEntry.EstimatedPaid.ToString("N0")</span>
+                                <span style="font-size: 0.75rem; color: #6b7c93;">Target: ₱@detailEntry.TargetAmount.Value.ToString("N0")</span>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Detail Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.75rem; color: #6b7c93; font-weight: 600; margin-bottom: 4px;">MEMBER</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #0d2137;">@detailEntry.MemberName</div>
+                        </div>
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.75rem; color: #6b7c93; font-weight: 600; margin-bottom: 4px;">STATUS</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #0d2137;">@detailEntry.Status</div>
+                        </div>
+                        @if (detailEntry.TargetAmount.HasValue)
+                        {
+                            <div style="background: #eff6ff; border-radius: 10px; padding: 14px; border: 1px solid #bfdbfe;">
+                                <div style="font-size: 0.75rem; color: #3b82f6; font-weight: 600; margin-bottom: 4px;">TARGET AMOUNT</div>
+                                <div style="font-size: 0.95rem; font-weight: 700; color: #1d4ed8;">₱@detailEntry.TargetAmount.Value.ToString("N0")</div>
+                            </div>
+                            <div style="background: @(detailEntry.RemainingBalance <= 0 ? "#f0fdf4" : "#fff1f2"); border-radius: 10px; padding: 14px; border: 1px solid @(detailEntry.RemainingBalance <= 0 ? "#bbf7d0" : "#fecdd3");">
+                                <div style="font-size: 0.75rem; color: @(detailEntry.RemainingBalance <= 0 ? "#16a34a" : "#dc2626"); font-weight: 600; margin-bottom: 4px;">REMAINING BALANCE</div>
+                                <div style="font-size: 0.95rem; font-weight: 700; color: @(detailEntry.RemainingBalance <= 0 ? "#15803d" : "#b91c1c");">
+                                    @(detailEntry.RemainingBalance <= 0 ? "✓ Fulfilled" : "₱" + detailEntry.RemainingBalance.ToString("N0"))
+                                </div>
+                            </div>
+                        }
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.75rem; color: #6b7c93; font-weight: 600; margin-bottom: 4px;">CALCULATED AMOUNT</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #0d2137;">₱@detailEntry.ExpectedAmount.ToString("N0") / @(detailEntry.Frequency == "Weekly" ? "week" : "month")</div>
+                        </div>
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.75rem; color: #6b7c93; font-weight: 600; margin-bottom: 4px;">FREQUENCY</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #0d2137;">@detailEntry.Frequency</div>
+                        </div>
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.75rem; color: #6b7c93; font-weight: 600; margin-bottom: 4px;">STARTING DATE</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #0d2137;">@detailEntry.StartDate.ToString("MMM dd, yyyy")</div>
+                        </div>
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.75rem; color: #6b7c93; font-weight: 600; margin-bottom: 4px;">END DATE</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #0d2137;">@(detailEntry.EndDate.HasValue ? detailEntry.EndDate.Value.ToString("MMM dd, yyyy") : "—")</div>
+                        </div>
+                        <div style="background: @(detailEntry.NextDue < DateTime.Today ? "#fff1f2" : "#f8fafc"); border-radius: 10px; padding: 14px; border: 1px solid @(detailEntry.NextDue < DateTime.Today ? "#fecdd3" : "#e2e8f0"); grid-column: span 2;">
+                            <div style="font-size: 0.75rem; color: @(detailEntry.NextDue < DateTime.Today ? "#dc2626" : "#6b7c93"); font-weight: 600; margin-bottom: 4px;">NEXT DUE DATE</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: @(detailEntry.NextDue < DateTime.Today ? "#b91c1c" : "#0d2137");">
+                                @detailEntry.NextDue.ToString("MMMM dd, yyyy") @(detailEntry.NextDue < DateTime.Today ? " ⚠ Overdue" : "")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div style="padding: 16px 28px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="btn-secondary" @onclick="CloseModals">Close</button>
+                    @if (detailEntry.Status == "Active")
+                    {
+                        <button class="btn-primary" @onclick="() => { showRecurringDetailModal = false; OpenRecordPaymentModal(detailEntry); }">Record Payment</button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showRecordPaymentModal && paymentEntry != null)
+    {
+        <div class="modal-overlay" @onclick="CloseModals">
+            <div class="modal-content" @onclick:stopPropagation="true">
+                <h3 class="modal-title">Record Recurring Payment</h3>
+                <div class="modal-body">
+                    <p class="mb-4"><strong>Member:</strong> @paymentEntry.MemberName</p>
+                    <p class="mb-4" style="font-size: 0.85rem; color: #6b7c93;">The calculated expected amount is ₱@paymentEntry.ExpectedAmount.ToString("N0"), but you may enter the exact amount paid below.</p>
+                    <div class="form-group">
+                        <label class="form-label">Actual Amount Paid (₱)</label>
+                        <input type="number" class="form-input" @bind="paymentAmount" />
+                    </div>
+                </div>
+                <div class="modal-actions mt-4">
+                    <button class="btn-primary" @onclick="ConfirmRecordPayment">Record Payment</button>
+                    <button class="btn-secondary" @onclick="CloseModals">Cancel</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.5);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 1000;
+    }
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        width: 400px;
+        max-width: 90%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .modal-title { margin-top: 0; margin-bottom: 1rem; color: #0d2137; }
+    .modal-body p { margin-bottom: 0.5rem; color: #4a5568; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .rc-actions { border-top: 1px solid #e2e8f0; padding-top: 0.75rem; margin-top: 0.5rem; text-align: right; }
+</style>
+
+@code {
+    private string activeTab = "tithes";
+
+    // Donation form
+    private string newDonor = "", newType = "Tithe", newNotes = "";
+    private decimal newAmount;
+    private DateTime newDate = DateTime.Today;
+
+    // Toast
+    private bool showToast; private string toastMessage = "", toastType = "";
+
+    // Data
+    private List<DonationEntry> donations = new();
+    private List<RecurringEntry> recurringTithes = new();
+    private List<Profile> members = new();
+    private Dictionary<string, int> monthlyData = new();
+    private Dictionary<string, int> weeklyData = new();
+    
+    private decimal totalTithes => donations.Where(d => d.Type == "Tithe").Sum(d => d.Amount);
+    private decimal totalOfferings => donations.Where(d => d.Type == "Offering").Sum(d => d.Amount);
+    private decimal netBalance => totalTithes + totalOfferings;
+
+    private List<DonationEntry> filteredTithes => donations.Where(d => d.Type == "Tithe").ToList();
+    private List<DonationEntry> filteredOfferings => donations.Where(d => d.Type == "Offering").ToList();
+    private List<DonationEntry> filteredDonations => donations.Where(d => d.Type == "Donation").ToList();
+
+
+    private int? currentProfileId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var accountIdClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (accountIdClaim != null && int.TryParse(accountIdClaim.Value, out int accountId))
+            {
+                var account = await DbContext.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.AccountId == accountId);
+                currentProfileId = account?.ProfileId;
+            }
+        }
+        
+        // Fallback for testing/development if no profile is mapped
+        if (currentProfileId == null)
+        {
+            currentProfileId = 1; // Assuming profile 1 exists (usually the admin/seed profile)
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        members = await FinancialService.GetMembersAsync();
+        var incomes = await FinancialService.GetIncomesAsync();
+
+        donations = incomes
+            .Select(i => new DonationEntry(
+                i.IncomeId.ToString(),
+                i.Member != null ? $"{i.Member.FirstName} {i.Member.LastName}" : "General",
+                i.IncomeType,
+                i.Amount,
+                i.EntryDate))
+            .ToList();
+
+        var dbRecurring = await FinancialService.GetRecurringTithesAsync();
+        recurringTithes = dbRecurring
+            .Select(r => {
+                // Use ACTUAL recorded income payments for this member since the schedule start date
+                var startDateTime = r.StartDate.ToDateTime(TimeOnly.MinValue);
+                decimal actualPaid = incomes
+                    .Where(i => i.MemberId == r.MemberId
+                             && i.IncomeType == "Tithe"
+                             && i.EntryDate >= startDateTime)
+                    .Sum(i => i.Amount);
+
+                decimal remaining = r.TargetAmount.HasValue ? Math.Max(0, r.TargetAmount.Value - actualPaid) : 0;
+
+                return new RecurringEntry(
+                    r.RecurringId,
+                    r.MemberId,
+                    r.Member.FirstName + " " + r.Member.LastName,
+                    r.Amount,
+                    r.Frequency,
+                    startDateTime,
+                    r.NextDueDate.ToDateTime(TimeOnly.MinValue),
+                    r.EndDate.HasValue ? r.EndDate.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+                    r.TargetAmount,
+                    actualPaid,
+                    remaining,
+                    r.Status);
+            })
+            .ToList();
+
+        // All 12 months of the current year (Jan–Dec)
+        var allMonths = Enumerable.Range(1, 12)
+            .Select(m => new DateTime(DateTime.Today.Year, m, 1))
+            .ToList();
+
+        var monthlySums = allMonths.Select(m => new {
+            MonthName = m.ToString("MMM"),
+            Total = donations
+                .Where(d => d.Date.Year == m.Year && d.Date.Month == m.Month)
+                .Sum(d => d.Amount)
+        }).ToList();
+
+        decimal maxMonthly = monthlySums.Max(m => m.Total);
+        if (maxMonthly == 0) maxMonthly = 1;
+
+        monthlyData = monthlySums.ToDictionary(
+            m => m.MonthName,
+            m => (int)(m.Total * 100 / maxMonthly)
+        );
+
+        // Current week daily totals (Sunday to Saturday)
+        var todayDate = DateTime.Today;
+        int diff = (7 + (todayDate.DayOfWeek - DayOfWeek.Sunday)) % 7;
+        var startOfWeek = todayDate.AddDays(-1 * diff).Date;
+        
+        var weeklyRaw = Enumerable.Range(0, 7)
+            .Select(i => startOfWeek.AddDays(i))
+            .Select(day => new {
+                Label = day.ToString("ddd"), // Sun, Mon, Tue, etc.
+                Total = donations
+                    .Where(d => d.Date.Date == day.Date)
+                    .Sum(d => d.Amount)
+            }).ToList();
+
+        decimal maxWeekly = weeklyRaw.Max(w => w.Total);
+        if (maxWeekly == 0) maxWeekly = 1;
+
+        weeklyData = weeklyRaw.ToDictionary(
+            w => w.Label,
+            w => (int)(w.Total * 100 / maxWeekly)
+        );
+    }
+    
+    private async Task AddDonation()
+    {
+        if (string.IsNullOrWhiteSpace(newDonor) || newAmount <= 0 || currentProfileId == null) return;
+
+        var income = new FinancialIncome
+        {
+            MemberId = selectedMemberId,
+            IncomeType = newType,
+            Amount = newAmount,
+            EntryDate = newDate,
+            RecordedBy = currentProfileId.Value,
+            Status = "Finalized"
+        };
+
+        await FinancialService.RecordIncomeAsync(income, currentProfileId.Value, newDonor);
+
+        await LoadData();
+        ClearForm();
+        await ShowToast("Donation recorded and finalized successfully!", "success");
+    }
+
+    private void ClearForm() { newDonor = ""; newAmount = 0; newNotes = ""; newType = "Tithe"; newDate = DateTime.Today; selectedMemberId = null; }
+
+    // Autocomplete state
+    private bool showDonorDropdown = false;
+    private int? selectedMemberId;
+
+    private List<Profile> filteredMembers => string.IsNullOrWhiteSpace(newDonor)
+        ? members
+        : members.Where(m => 
+            $"{m.FirstName} {m.LastName}".Contains(newDonor, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private void SelectDonor(Profile member)
+    {
+        newDonor = $"{member.FirstName} {member.LastName}";
+        selectedMemberId = member.ProfileId;
+        showDonorDropdown = false;
+    }
+
+    private async Task HideDonorDropdownDelayed()
+    {
+        await Task.Delay(200); // Give time for mousedown to register
+        showDonorDropdown = false;
+        StateHasChanged();
+    }
+
+    private async Task ShowToast(string msg, string type)
+    {
+        toastMessage = msg; toastType = type; showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showToast = false;
+        StateHasChanged();
+    }
+
+    // View Modal State
+    private bool showViewModal = false;
+    private (string Id, string Name, decimal Amount, DateTime Date, string Category, string? RefNo) viewModalData;
+
+    private void OpenViewModal(string id, string name, decimal amount, DateTime date, string category, string? refNo)
+    {
+        viewModalData = (id, name, amount, date, category, refNo);
+        showViewModal = true;
+    }
+
+    // Edit Recurring Modal State
+    private bool showEditRecurringModal = false;
+    private int editRecId;
+    private string editRecMemberName = "";
+    private string editRecStatus = "";
+    private decimal editRecAmount;
+
+    private void OpenEditRecurringModal(RecurringEntry entry)
+    {
+        editRecId = entry.Id;
+        editRecMemberName = entry.MemberName;
+        editRecStatus = entry.Status;
+        editRecAmount = entry.ExpectedAmount;
+        showEditRecurringModal = true;
+    }
+
+    private async Task SaveRecurringEdit()
+    {
+        if (currentProfileId == null) return;
+        
+        var existing = await DbContext.RecurringTithes.FindAsync(editRecId);
+        if (existing != null)
+        {
+            existing.Status = editRecStatus;
+            existing.Amount = editRecAmount;
+            await FinancialService.UpdateRecurringTitheAsync(existing, currentProfileId.Value);
+            await LoadData();
+            await ShowToast("Schedule updated!", "success");
+        }
+        CloseModals();
+    }
+
+    private void CloseModals()
+    {
+        showViewModal = false;
+        showEditRecurringModal = false;
+        showRecurringDetailModal = false;
+        showRecordPaymentModal = false;
+        detailEntry = null;
+        paymentEntry = null;
+    }
+
+    private bool showRecordPaymentModal = false;
+    private RecurringEntry? paymentEntry;
+    private decimal paymentAmount;
+
+    private void OpenRecordPaymentModal(RecurringEntry entry)
+    {
+        paymentEntry = entry;
+        paymentAmount = entry.ExpectedAmount;
+        showRecordPaymentModal = true;
+    }
+
+    private async Task ConfirmRecordPayment()
+    {
+        if (currentProfileId == null || paymentEntry == null) return;
+
+        // 1. Create income record for this payment
+        var income = new FinancialIncome
+        {
+            MemberId = paymentEntry.MemberId,
+            IncomeType = "Tithe",
+            Amount = paymentAmount,
+            EntryDate = DateTime.Now,
+            RecordedBy = currentProfileId.Value,
+            Status = "Finalized"
+        };
+
+        await FinancialService.RecordIncomeAsync(income, currentProfileId.Value, paymentEntry.MemberName);
+
+        // 2. Advance the NextDueDate based on frequency
+        var existing = await DbContext.RecurringTithes.FindAsync(paymentEntry.Id);
+        if (existing != null)
+        {
+            existing.NextDueDate = existing.Frequency == "Weekly"
+                ? existing.NextDueDate.AddDays(7)
+                : existing.NextDueDate.AddMonths(1);
+
+            await FinancialService.UpdateRecurringTitheAsync(existing, currentProfileId.Value);
+        }
+
+        await LoadData();
+        await ShowToast($"Payment of ₱{paymentAmount:N0} recorded for {paymentEntry.MemberName}. Next due date updated!", "success");
+        CloseModals();
+    }
+
+
+
+    // Recurring Detail Modal
+    private bool showRecurringDetailModal = false;
+    private RecurringEntry? detailEntry;
+
+    private void OpenRecurringDetailModal(RecurringEntry entry)
+    {
+        detailEntry = entry;
+        showRecurringDetailModal = true;
+    }
+
+    private async Task HandleSaveSchedule((int MemberId, decimal Amount, decimal? TargetAmount, string Frequency, DateTime StartDate, DateTime? EndDate) args)
+    {
+        if (currentProfileId == null) return;
+        var tithe = new RecurringTithe
+        {
+            MemberId = args.MemberId,
+            Amount = args.Amount,
+            TargetAmount = args.TargetAmount,
+            Frequency = args.Frequency,
+            StartDate = DateOnly.FromDateTime(args.StartDate),
+            EndDate = args.EndDate.HasValue ? DateOnly.FromDateTime(args.EndDate.Value) : null,
+            NextDueDate = args.Frequency == "Weekly"
+                ? DateOnly.FromDateTime(args.StartDate).AddDays(7)
+                : DateOnly.FromDateTime(args.StartDate).AddMonths(1),
+            CreatedBy = currentProfileId.Value,
+            CreatedDate = DateTime.Now,
+            Status = "Active"
+        };
+        await FinancialService.RecordRecurringTitheAsync(tithe, currentProfileId.Value);
+        await LoadData();
+        await ShowToast("Recurring schedule created!", "success");
+    }
+}

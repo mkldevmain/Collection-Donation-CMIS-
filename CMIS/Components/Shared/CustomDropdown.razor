@@ -1,0 +1,159 @@
+@typeparam TItem
+
+@* 1. CRITICAL: position: relative anchors the menu *@
+<div class="custom-dropdown-container" style="position: relative; width: 100%;">
+    
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="custom-dropdown-label">@Label</label>
+    }
+
+    <div class="@TriggerClass custom-dropdown-trigger @(isOpen ? "open" : "")" @onclick="ToggleDropdown" style="cursor: pointer;">
+        @if (LeftIcon != null)
+        {
+            <div class="dropdown-left-icon">
+                @LeftIcon
+            </div>
+        }
+        <span class="dropdown-selected-text">@GetSelectedText()</span>
+        
+        <!-- Editable Arrow Icon Wrapper (Rotates when open) -->
+        <div class="dropdown-arrow-wrapper @(isOpen ? "open" : "")">
+            @if (CustomIcon != null)
+            {
+                @CustomIcon
+            }
+            else
+            {
+                <!-- Default SVG Chevron: highly editable SVG properties -->
+                <svg class="dropdown-arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            }
+        </div>
+    </div>
+
+    @if (isOpen)
+    {
+        <div class="dropdown-overlay" @onclick="CloseDropdown" style="position: fixed; inset: 0; z-index: 40; cursor: default;"></div>
+
+        <div class="custom-dropdown-menu" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column;">
+            
+            @if (ShowSearch)
+            {
+                <div class="dropdown-search-container" style="padding: 0.6rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                    <input type="text" 
+                           @bind="searchQuery" 
+                           @bind:event="oninput" 
+                           placeholder="Search..." 
+                           class="dropdown-search-input" 
+                           style="width: 100%; padding: 0.5rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;" />
+                </div>
+            }
+
+            <ul class="custom-dropdown-list" style="margin: 0; padding: 0; list-style: none; max-height: 240px; overflow-y: auto;">
+                @if (DefaultOptionText != null)
+                {
+                    <li class="custom-dropdown-item @(IsDefaultSelected() ? "active" : "")"
+                        @onclick="() => SelectDefault()">
+                        @DefaultOptionText
+                    </li>
+                }
+
+                @foreach (var item in FilteredItems)
+                {
+                    <li class="custom-dropdown-item @(IsSelected(item) ? "active" : "")"
+                        @onclick="() => SelectItem(item)">
+                        @DisplayProperty(item)
+                    </li>
+                }
+                
+                @if (!FilteredItems.Any())
+                {
+                    <li class="custom-dropdown-empty" style="padding: 0.8rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">No results found</li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<TItem> Items { get; set; } = Enumerable.Empty<TItem>();
+    [Parameter] public TItem? SelectedValue { get; set; }
+    [Parameter] public EventCallback<TItem?> SelectedValueChanged { get; set; }
+    
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Select an option";
+    [Parameter] public bool ShowSearch { get; set; } = false;
+    
+    [Parameter, EditorRequired] public Func<TItem, string> DisplayProperty { get; set; } = default!;
+    
+    [Parameter] public string? DefaultOptionText { get; set; }
+    [Parameter] public TItem? DefaultOptionValue { get; set; }
+    
+    [Parameter] public RenderFragment? CustomIcon { get; set; }
+    
+    [Parameter] public string TriggerClass { get; set; } = "mmbr-filter-select";
+    
+    [Parameter] public RenderFragment? LeftIcon { get; set; }
+    [Parameter] public string? DisplayPrefix { get; set; }
+
+    private bool isOpen = false;
+    private string searchQuery = "";
+
+    private IEnumerable<TItem> FilteredItems => 
+        string.IsNullOrWhiteSpace(searchQuery) 
+            ? Items 
+            : Items.Where(i => DisplayProperty(i).Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    private void ToggleDropdown()
+    {
+        isOpen = !isOpen;
+        if (!isOpen) searchQuery = ""; // clear search on close
+    }
+
+    private void CloseDropdown()
+    {
+        isOpen = false;
+        searchQuery = "";
+    }
+
+    private async Task SelectItem(TItem item)
+    {
+        SelectedValue = item;
+        await SelectedValueChanged.InvokeAsync(item);
+        CloseDropdown();
+    }
+
+    private async Task SelectDefault()
+    {
+        SelectedValue = DefaultOptionValue;
+        await SelectedValueChanged.InvokeAsync(DefaultOptionValue);
+        CloseDropdown();
+    }
+
+    private bool IsSelected(TItem item)
+    {
+        return EqualityComparer<TItem>.Default.Equals(SelectedValue, item);
+    }
+
+    private bool IsDefaultSelected()
+    {
+        return EqualityComparer<TItem>.Default.Equals(SelectedValue, DefaultOptionValue);
+    }
+
+    private string GetSelectedText()
+    {
+        if (IsDefaultSelected() && DefaultOptionText != null)
+        {
+            return DefaultOptionText;
+        }
+
+        if (SelectedValue != null && !IsDefaultSelected())
+        {
+            return (DisplayPrefix ?? "") + DisplayProperty(SelectedValue);
+        }
+
+        return Placeholder;
+    }
+}

@@ -1,0 +1,37 @@
+@inject NavigationManager Navigation
+
+<!-- ===== ACCOUNT CREATED MODAL — Backdrop ===== -->
+<div class="ac-modal-backdrop @(IsAnimating ? "active" : "")">
+    <div class="ac-modal-card @(IsAnimating ? "active" : "")">
+        <div class="ac-modal-body" id="modal-account-created">
+
+            <!-- Checkmark Icon -->
+            <div class="ac-modal-icon-circle">
+                <svg class="ac-modal-icon" width="44" height="44" viewBox="0 0 64 64" fill="none">
+                    <circle cx="32" cy="32" r="22" stroke="#0d2137" stroke-width="3.5" fill="none"/>
+                    <path d="M22 33l7 7 13-14" stroke="#0d2137" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+            </div>
+
+            <h2 class="ac-modal-heading">Account Created</h2>
+            <p class="ac-modal-subtext">Your account has been successfully created.<br />You can now sign in to your account.</p>
+
+            <!-- Action -->
+            <button class="ac-btn-primary" id="btn-go-signin" @onclick="GoToSignIn">
+                GO TO SIGN IN
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M13 7L8 2M13 7L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>Controls the fade / scale-in animation state.</summary>
+    [Parameter]
+    public bool IsAnimating { get; set; }
+
+    private void GoToSignIn()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

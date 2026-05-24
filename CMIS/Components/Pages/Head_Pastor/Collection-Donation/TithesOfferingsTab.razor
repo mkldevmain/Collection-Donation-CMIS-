@@ -1,0 +1,61 @@
+@using CMIS.Components.Pages.Head_Pastor.Collection_Donation
+
+<MudCard Elevation="2" Class="rounded-lg mb-6" Style="border: 1px solid #e2e8f0;">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0d2137;">Income Records</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudTextField @bind-Value="searchString" Placeholder="Search records..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudTable Items="@IncomeRecords" Filter="new Func<FinancialRecord,bool>(FilterRecords)" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<FinancialRecord, object>(x=>x.Id)">ID</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<FinancialRecord, object>(x=>x.Ministry)">Ministry</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<FinancialRecord, object>(x=>x.Type)">Type</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<FinancialRecord, object>(x=>x.Category)">Category</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<FinancialRecord, object>(x=>x.Amount)">Amount</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<FinancialRecord, object>(x=>x.Date)">Date</MudTableSortLabel></MudTh>
+                <MudTh>Status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.Id</MudTd>
+                <MudTd DataLabel="Ministry">@context.Ministry</MudTd>
+                <MudTd DataLabel="Type">
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Text">Income</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Category">@context.Category</MudTd>
+                <MudTd DataLabel="Amount" Style="font-weight: 600;">₱@context.Amount.ToString("N0")</MudTd>
+                <MudTd DataLabel="Date">@context.Date.ToString("MMM dd, yyyy")</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small">@context.Status</MudChip>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter]
+    public IEnumerable<FinancialRecord> IncomeRecords { get; set; } = default!;
+
+    private string searchString = "";
+
+    private bool FilterRecords(FinancialRecord element)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Ministry.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Category.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Id.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+}

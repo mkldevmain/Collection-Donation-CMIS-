@@ -1,0 +1,7 @@
+.attendance-wrapper {
+    display: flex;
+    min-height: 100vh;
+    padding: 0 1rem 1rem 1rem;
+    box-sizing: border-box;
+    padding-top: 78px;
+}

@@ -1,0 +1,219 @@
+/* ═══════════════════════════════════════════
+   Member Directory – Scoped Styles
+   ═══════════════════════════════════════════ */
+
+/* ── Stats Cards ── */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #e8ecf1;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0d2137;
+}
+
+.stat-label {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+}
+
+.stat-value {
+    color: #0d2137;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+    display: flex;
+    gap: 0.7rem;
+    margin-bottom: 1.5rem;
+}
+
+.searchinput {
+    border: 1px solid rgba(190, 175, 175, 0.3);
+    color: #0d2137;
+    padding: 0.5rem 1rem 0.5rem 2.4rem;
+    border-radius: 10px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    background: transparent;
+    outline: none;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.searchinput:focus {
+    border-color: #0d2137;
+}
+
+.searchinput::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.filter-select {
+    border: 1px solid rgba(190, 175, 175, 0.3);
+    background-color: white;
+    color: #64748b;
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    appearance: none;
+    cursor: pointer;
+    min-width: 160px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+}
+
+.sortbybutton {
+    border: 1px solid rgba(190, 175, 175, 0.3);
+    background-color: white;
+    color: #64748b;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ── Table Layout ── */
+.table-container {
+    background-color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.table-header,
+.table-row {
+    display: grid;
+    grid-template-columns: 2.5fr 1.5fr 1fr 1fr 1fr 40px;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    gap: 1rem;
+}
+
+.table-header {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0d2137;
+    background: #f8fafc;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.table-row {
+    font-size: 0.88rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-row:hover {
+    background: #f8fafc;
+}
+
+.table-row:last-child {
+    border-bottom: none;
+}
+
+/* ── Status Tags ── */
+.status-tag {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+    text-align: center;
+    min-width: 70px;
+}
+
+.status-new {
+    background-color: #dbeafe;
+    color: #3b82f6;
+}
+
+.status-active {
+    background-color: #dcfce7;
+    color: #22c55e;
+}
+
+.status-inactive {
+    background-color: #ffedd5;
+    color: #f97316;
+}
+
+/* ── Actions Menu ── */
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    padding: 0.3rem;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-menu {
+    position: absolute;
+    right: 30px;
+    margin-top: 10px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    padding: 0.5rem 0;
+    min-width: 120px;
+}
+
+.action-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    color: #0d2137;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.action-item:hover {
+    background: #f1f5f9;
+}
+
+body {
+    background: #f4f7f6 !important;
+}

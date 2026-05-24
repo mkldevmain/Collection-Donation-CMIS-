@@ -1,0 +1,345 @@
+@page "/register/finalize/{ProfileId:int}"
+@layout CMIS.Components.Layout.LoginLayout
+@using CMIS.Data
+@using CMIS.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Finalize Your Account — Jesus Our Banner Ministry</PageTitle>
+<HeadContent>
+    <meta name="description" content="Complete your CMIS registration by setting up your email and password." />
+</HeadContent>
+
+<!-- ===== TOP NAVBAR ===== -->
+<nav class="site-navbar">
+    <div class="navbar-inner">
+        <!-- Brand -->
+        <a href="/" class="navbar-brand" id="navbar-brand">
+            <img src="images/worship-hero.png" alt="" class="brand-icon" aria-hidden="true" />
+            <div class="brand-text">
+                <span class="brand-title">JESUS OUR BANNER</span>
+                <span class="brand-subtitle">MINISTRY</span>
+            </div>
+        </a>
+
+        <!-- Hamburger for mobile -->
+        <button class="navbar-toggler" id="navbar-toggler" @onclick="ToggleMenu" aria-label="Toggle navigation">
+            <span class="toggler-bar"></span>
+            <span class="toggler-bar"></span>
+            <span class="toggler-bar"></span>
+        </button>
+
+        <!-- Links -->
+        <div class="navbar-links @(menuOpen ? "open" : "")">
+            <a href="/" class="nav-link" id="nav-home">HOME</a>
+            <a href="/activities" class="nav-link" id="nav-activities">ACTIVITIES</a>
+            <a href="/services" class="nav-link" id="nav-services">SERVICES</a>
+            <div class="nav-dropdown" id="nav-ministries-dropdown">
+                <button class="nav-link dropdown-toggle" @onclick="() => ToggleDropdown(1)">
+                    MINISTRIES
+                    <svg class="chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                @if (activeDropdown == 1)
+                {
+                    <div class="dropdown-menu">
+                        <a href="/ministries/worship" class="dropdown-item">Worship</a>
+                        <a href="/ministries/youth" class="dropdown-item">Youth</a>
+                        <a href="/ministries/children" class="dropdown-item">Children</a>
+                        <a href="/ministries/prayer" class="dropdown-item">Prayer</a>
+                    </div>
+                }
+            </div>
+            <div class="nav-dropdown" id="nav-about-dropdown">
+                <button class="nav-link dropdown-toggle" @onclick="() => ToggleDropdown(2)">
+                    ABOUT
+                    <svg class="chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                @if (activeDropdown == 2)
+                {
+                    <div class="dropdown-menu">
+                        <a href="/about/our-story" class="dropdown-item">Our Story</a>
+                        <a href="/about/leadership" class="dropdown-item">Leadership</a>
+                        <a href="/about/beliefs" class="dropdown-item">Beliefs</a>
+                    </div>
+                }
+            </div>
+            <a href="/give" class="nav-link" id="nav-give">GIVE</a>
+        </div>
+
+        <!-- CTA -->
+        <a href="/join" class="btn-join" id="btn-join-us">
+            JOIN US
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M13 7L8 2M13 7L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </div>
+</nav>
+
+<!-- ===== MAIN SPLIT CONTENT ===== -->
+<section class="fin-split">
+    <!-- Left: Hero Image -->
+    <div class="fin-hero">
+        <img src="images/worship-hero.png" alt="Church worship service" class="hero-img" />
+        <div class="hero-overlay"></div>
+    </div>
+
+    <!-- Right: Finalization Form -->
+    <div class="fin-form-panel">
+        <div class="form-container">
+
+            @if (profile is null && !isLoading)
+            {
+                <!-- Invalid Profile ID -->
+                <div class="fin-error-state" id="error-invalid-profile">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <h2 class="fin-error-heading">Profile not found</h2>
+                    <p class="fin-error-text">The profile you're trying to register does not exist or has already been registered.</p>
+                    <a href="/register" class="btn-back-link" id="btn-back-to-register">← Back to Registration</a>
+                </div>
+            }
+            else if (profile is not null)
+            {
+                <h1 class="form-heading" id="fin-heading">Set up your account.</h1>
+                <p class="form-subheading">Please enter your details.</p>
+
+                <!-- Profile Preview Card -->
+                <div class="profile-preview" id="profile-preview">
+                    <div class="preview-row">
+                        <span class="preview-label">First Name:</span>
+                        <span class="preview-value">@profile.FirstName</span>
+                    </div>
+                    <div class="preview-row">
+                        <span class="preview-label">Middle Name:</span>
+                        <span class="preview-value">@(profile.MiddleName ?? "—")</span>
+                    </div>
+                    <div class="preview-row">
+                        <span class="preview-label">Last Name:</span>
+                        <span class="preview-value">@profile.LastName</span>
+                    </div>
+                    <div class="preview-row">
+                        <span class="preview-label">Date of Birth:</span>
+                        <span class="preview-value">@(profile.BirthDate?.ToString("MM/dd/yyyy") ?? "—")</span>
+                    </div>
+                    <div class="preview-row">
+                        <span class="preview-label">Phone Number:</span>
+                        <span class="preview-value">@(profile.ContactNumber ?? "—")</span>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="fin-error" id="fin-error">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        @errorMessage
+                    </div>
+                }
+
+                <EditForm Model="formModel" OnSubmit="HandleCreateAccount">
+                    <div class="field-group">
+                        <label for="fin-email" class="field-label">Email</label>
+                        <InputText id="fin-email" type="email" class="field-input" @bind-Value="formModel.Email" placeholder="Email" />
+                    </div>
+
+                    <div class="field-group">
+                        <label for="fin-password" class="field-label">Password</label>
+                        <div class="password-wrapper">
+                            <InputText id="fin-password" type="@(showPassword ? "text" : "password")" class="field-input" @bind-Value="formModel.Password" placeholder="Password" />
+                            <button type="button" class="password-toggle" @onclick="() => showPassword = !showPassword" aria-label="Toggle password visibility">
+                                @if (showPassword)
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                }
+                                else
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="fin-confirm" class="field-label">Confirm Password</label>
+                        <div class="password-wrapper">
+                            <InputText id="fin-confirm" type="@(showConfirm ? "text" : "password")" class="field-input" @bind-Value="formModel.ConfirmPassword" placeholder="Confirm Password" />
+                            <button type="button" class="password-toggle" @onclick="() => showConfirm = !showConfirm" aria-label="Toggle confirm password visibility">
+                                @if (showConfirm)
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                }
+                                else
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-create" id="btn-create-account" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span>CREATING ACCOUNT...</span>
+                        }
+                        else
+                        {
+                            <span>CREATE ACCOUNT</span>
+                            <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M13 7L8 2M13 7L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        }
+                    </button>
+                </EditForm>
+
+                <p class="login-text">
+                    Already have an account?
+                    <a href="/login" class="login-link" id="login-link">Sign in.</a>
+                </p>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ===== SUCCESS DIALOG ===== -->
+@if (showSuccessModal)
+{
+    <CMIS.Components.Dialogs.AccountCreatedDialog IsAnimating="modalAnimating" />
+}
+
+@code {
+    // ---- Route Parameter ----
+    [Parameter]
+    public int ProfileId { get; set; }
+
+    // ---- State ----
+    private Profile? profile;
+    private FinalizeFormModel formModel = new();
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showPassword = false;
+    private bool showConfirm = false;
+    private string? errorMessage;
+
+    private bool showSuccessModal = false;
+    private bool modalAnimating = false;
+
+    private bool menuOpen = false;
+    private int? activeDropdown = null;
+
+    // ---- Navbar helpers ----
+    private void ToggleMenu() => menuOpen = !menuOpen;
+
+    private void ToggleDropdown(int id)
+    {
+        activeDropdown = activeDropdown == id ? null : id;
+    }
+
+    // ---- Lifecycle ----
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Fetch profile and check it doesn't already have an account
+            profile = await DbContext.Profiles
+                .Include(p => p.Account)
+                .FirstOrDefaultAsync(p => p.ProfileId == ProfileId && p.Account == null);
+        }
+        catch (Exception)
+        {
+            profile = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // ---- Create Account ----
+    private async Task HandleCreateAccount()
+    {
+        errorMessage = null;
+
+        // --- Validation ---
+        if (string.IsNullOrWhiteSpace(formModel.Email))
+        {
+            errorMessage = "Please enter your email address.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(formModel.Password))
+        {
+            errorMessage = "Please enter a password.";
+            return;
+        }
+
+        if (formModel.Password.Length < 6)
+        {
+            errorMessage = "Password must be at least 6 characters long.";
+            return;
+        }
+
+        if (formModel.Password != formModel.ConfirmPassword)
+        {
+            errorMessage = "Passwords do not match.";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            // Check if email is already in use
+            var emailExists = await DbContext.Accounts
+                .AnyAsync(a => a.Email == formModel.Email.Trim());
+
+            if (emailExists)
+            {
+                errorMessage = "This email address is already registered. Please use a different email.";
+                isSaving = false;
+                return;
+            }
+
+            // Hash the password
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(formModel.Password);
+
+            // Create the Account
+            var newAccount = new Account
+            {
+                ProfileId = ProfileId,
+                RoleId = 6, // Member Role
+                Username = formModel.Email.Trim(),
+                Email = formModel.Email.Trim(),
+                PasswordHash = passwordHash,
+                Status = "Active"
+            };
+
+            DbContext.Accounts.Add(newAccount);
+
+            // Activate the Profile as a member
+            profile!.IsMember = true;
+            profile.ProfileStatus = "Active";
+
+            await DbContext.SaveChangesAsync();
+
+            // Show success modal
+            showSuccessModal = true;
+            await Task.Delay(20);
+            modalAnimating = true;
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            errorMessage = "An error occurred while creating your account. Please try again.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    // ---- Form Model ----
+    public class FinalizeFormModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

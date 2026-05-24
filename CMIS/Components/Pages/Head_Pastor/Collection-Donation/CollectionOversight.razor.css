@@ -1,0 +1,341 @@
+/* ---------- PAGE HEADING ---------- */
+::deep .page-heading {
+    margin-bottom: 1.5rem;
+}
+
+::deep .page-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.65rem;
+    color: #0d2137;
+    margin: 0 0 0.3rem;
+}
+
+::deep .page-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    color: #6b7c93;
+    margin: 0;
+}
+
+/* ---------- TAB BAR ---------- */
+::deep .tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #e8ecf1;
+    margin-bottom: 1.25rem;
+}
+
+::deep .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.7rem 1.1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #6b7c93;
+    text-decoration: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+::deep .tab:hover {
+    color: #0d2137;
+}
+
+::deep .tab.active {
+    color: #0d2137;
+    border-bottom-color: #0d2137;
+}
+
+/* ---------- PREMIUM CHART CARDS ---------- */
+::deep .premium-chart-card {
+    background: linear-gradient(145deg, #ffffff, #f8fafd) !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px -5px rgba(13, 33, 55, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.5) inset !important;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    animation: fadeUp 0.6s ease-out forwards;
+}
+
+::deep .premium-chart-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px -5px rgba(13, 33, 55, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5) inset !important;
+}
+
+::deep .chart-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+::deep .chart-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: #0d2137;
+    margin: 0;
+}
+
+::deep .chart-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: #8e99a4;
+    font-weight: 500;
+    margin-top: 0.2rem;
+}
+
+::deep .chart-trend-box {
+    background: rgba(39, 174, 96, 0.1);
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+::deep .chart-trend-value {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #1e8449;
+    line-height: 1;
+}
+
+::deep .chart-trend-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    color: #27ae60;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+
+/* Animations */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* ---------- CUSTOM BAR CHART ---------- */
+::deep .custom-bar-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 250px;
+    padding: 20px 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 10px;
+}
+::deep .custom-bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    justify-content: flex-end;
+}
+::deep .custom-bar-wrapper {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+    height: 100%;
+    width: 100%;
+}
+::deep .custom-bar {
+    width: 24px;
+    border-radius: 4px 4px 0 0;
+    transition: height 1s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.2s;
+    animation: barGrow 1s ease-out forwards;
+    transform-origin: bottom;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    position: relative;
+    cursor: pointer;
+}
+::deep .custom-bar:hover {
+    filter: brightness(1.15);
+}
+::deep .custom-bar::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(0px);
+    background: #0d2137;
+    color: #ffffff;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+::deep .custom-bar::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(0px);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #0d2137 transparent transparent transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 10;
+}
+::deep .custom-bar:hover::after, ::deep .custom-bar:hover::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-8px);
+}
+::deep .custom-bar.income {
+    background: linear-gradient(180deg, #2ecc71, #27ae60);
+}
+::deep .custom-bar.expense {
+    background: linear-gradient(180deg, #e74c3c, #c0392b);
+}
+::deep .custom-bar-label {
+    margin-top: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: #6b7c93;
+    font-weight: 600;
+}
+@keyframes barGrow {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+
+::deep .custom-chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 15px;
+}
+::deep .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: #4a5568;
+    font-weight: 600;
+}
+::deep .legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+::deep .legend-color.income { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+::deep .legend-color.expense { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+/* ---------- CUSTOM DONUT CHART ---------- */
+::deep .custom-donut-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding-top: 10px;
+}
+::deep .custom-donut {
+    width: 190px;
+    height: 190px;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    transition: background 0.5s ease;
+}
+::deep .custom-donut::after {
+    content: '';
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: inset 0 3px 12px rgba(0,0,0,0.04);
+}
+::deep .custom-donut-center {
+    position: absolute;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+::deep .custom-donut-total {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: #0d2137;
+}
+::deep .custom-donut-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    color: #8e99a4;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+::deep .donut-legend {
+    margin-top: 1.5rem;
+    width: 100%;
+}
+::deep .donut-legend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+}
+::deep .donut-legend-item:last-child {
+    border-bottom: none;
+}
+::deep .dli-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+::deep .dli-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+::deep .dli-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: #4a5568;
+    font-weight: 500;
+}
+::deep .dli-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    color: #0d2137;
+    font-weight: 700;
+}

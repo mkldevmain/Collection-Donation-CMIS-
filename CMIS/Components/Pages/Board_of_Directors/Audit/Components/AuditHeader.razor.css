@@ -1,0 +1,44 @@
+/* =============================================
+   AUDIT HEADER — Scoped Styles
+   Aligned with Ministry Head theme
+   ============================================= */
+
+/* ---------- PAGE HEADING ---------- */
+.page-heading {
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.65rem;
+    color: #0d2137;
+    margin: 0 0 0.3rem;
+}
+
+.page-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    color: #6b7c93;
+    margin: 0;
+}
+
+/* ---------- AUTHORITY BANNER ---------- */
+.authority-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: #eaf2f8;
+    border: 1px solid #bbdcfb;
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    color: #154360;
+}
+
+.authority-banner svg {
+    flex-shrink: 0;
+    color: #2980b9;
+}

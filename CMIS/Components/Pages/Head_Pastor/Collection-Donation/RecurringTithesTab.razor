@@ -1,0 +1,31 @@
+@using CMIS.Components.Pages.Head_Pastor.Collection_Donation
+
+<MudCard Elevation="2" Class="rounded-lg h-100 mb-6" Style="border: 1px solid #e2e8f0;">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0d2137;">Recurring Tithes Monitor</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudList T="RecurringEntry" Dense="true" ReadOnly="true">
+            @foreach (var r in RecurringTithes)
+            {
+                <MudListItem T="RecurringEntry">
+                    <div class="d-flex align-center justify-space-between w-100">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">@r.MemberName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@r.Frequency · ₱@r.Amount.ToString("N0")</MudText>
+                        </div>
+                        <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Outlined">@r.NextDueDate.ToString("MMM dd")</MudChip>
+                    </div>
+                </MudListItem>
+                <MudDivider />
+            }
+        </MudList>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter]
+    public List<RecurringEntry> RecurringTithes { get; set; } = new();
+}

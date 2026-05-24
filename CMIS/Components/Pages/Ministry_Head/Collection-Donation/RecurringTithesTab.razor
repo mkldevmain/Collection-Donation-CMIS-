@@ -1,0 +1,145 @@
+@using CMIS.Components.Pages.Ministry_Head.Collection_Donation
+@using CMIS.Models
+
+<div class="recurring-header">
+    <h2 class="form-title">Recurring Tithe Schedules</h2>
+    <button class="btn-primary" @onclick="() => showForm = !showForm">
+        @(showForm ? "Cancel" : "+ New Schedule")
+    </button>
+</div>
+
+@if (showForm)
+{
+    <div class="form-card mb-6">
+        <h2 class="form-title">Create New Schedule</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Member</label>
+                <select class="form-input" @bind="newRecMemberId">
+                    <option value="0">-- Select Member --</option>
+                    @foreach (var m in Members)
+                    {
+                        <option value="@m.ProfileId">@m.FirstName @m.LastName</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target Amount (₱)</label>
+                <input type="number" class="form-input" placeholder="0.00 (Optional)" @bind="newRecTargetAmount" @bind:after="CalculateRecAmount" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Frequency</label>
+                <select class="form-input" @bind="newRecFrequency" @bind:after="CalculateRecAmount">
+                    <option value="Weekly">Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input type="date" class="form-input" @bind="newRecStartDate" @bind:after="CalculateRecAmount" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">End Date</label>
+                <input type="date" class="form-input" @bind="newRecEndDate" @bind:after="CalculateRecAmount" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Computed Tithe per @(newRecFrequency == "Weekly" ? "Week" : "Month") (₱)</label>
+                <input type="number" class="form-input" placeholder="0.00" @bind="newRecAmount"
+                       readonly="@(newRecTargetAmount > 0 && newRecEndDate.HasValue)"
+                       style="@(newRecTargetAmount > 0 && newRecEndDate.HasValue ? "background-color: #f1f5f9; color: #475569;" : "")" />
+            </div>
+        </div>
+        <div class="form-actions mt-4">
+            <button class="btn-primary" @onclick="HandleSave">Save Schedule</button>
+            <button class="btn-secondary" @onclick="() => showForm = false">Cancel</button>
+        </div>
+    </div>
+}
+
+<div class="recurring-cards">
+    @foreach (var r in Schedules)
+    {
+        <div class="recurring-card">
+            <div class="rc-top">
+                <div class="rc-member">@r.MemberName</div>
+                <span class="status-badge status-@r.Status.ToLower().Replace(" ","")">
+                    <span class="status-dot"></span>@r.Status
+                </span>
+            </div>
+            <div class="rc-details">
+                @if (r.TargetAmount.HasValue)
+                {
+                    <div class="rc-detail">
+                        <span class="rc-label">Target Amount</span>
+                        <span class="rc-value" style="color: #0d6efd; font-weight:700;">₱@r.TargetAmount.Value.ToString("N0")</span>
+                    </div>
+                    <div class="rc-detail">
+                        <span class="rc-label">Remaining</span>
+                        <span class="rc-value" style="color: @(r.RemainingBalance <= 0 ? "#22c55e" : "#ef4444"); font-weight:700;">₱@r.RemainingBalance.ToString("N0")</span>
+                    </div>
+                }
+                <div class="rc-detail"><span class="rc-label">Calculated Amt</span><span class="rc-value">₱@r.ExpectedAmount.ToString("N0")</span></div>
+                <div class="rc-detail"><span class="rc-label">Frequency</span><span class="rc-value">@r.Frequency</span></div>
+                <div class="rc-detail"><span class="rc-label">Start Date</span><span class="rc-value">@r.StartDate.ToString("MMM dd, yyyy")</span></div>
+                @if (r.EndDate.HasValue)
+                {
+                    <div class="rc-detail"><span class="rc-label">End Date</span><span class="rc-value">@r.EndDate.Value.ToString("MMM dd, yyyy")</span></div>
+                }
+                <div class="rc-detail">
+                    <span class="rc-label">Next Due</span>
+                    <span class="rc-value" style="color: @(r.NextDue < DateTime.Today ? "#ef4444" : "inherit");">@r.NextDue.ToString("MMM dd, yyyy")</span>
+                </div>
+            </div>
+            <div class="rc-actions">
+                @if (r.Status == "Active")
+                {
+                    <button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; margin-right: 6px;" @onclick="() => OnRecordPayment.InvokeAsync(r)">Record Payment</button>
+                }
+                <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.85rem; margin-right: 6px;" @onclick="() => OnViewDetails.InvokeAsync(r)">Details</button>
+                <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" @onclick="() => OnEditSchedule.InvokeAsync(r)">Edit</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<RecurringEntry> Schedules { get; set; } = new();
+    [Parameter] public List<Profile> Members { get; set; } = new();
+    [Parameter] public EventCallback<RecurringEntry> OnRecordPayment { get; set; }
+    [Parameter] public EventCallback<RecurringEntry> OnViewDetails { get; set; }
+    [Parameter] public EventCallback<RecurringEntry> OnEditSchedule { get; set; }
+    [Parameter] public EventCallback<(int MemberId, decimal Amount, decimal? TargetAmount, string Frequency, DateTime StartDate, DateTime? EndDate)> OnSaveSchedule { get; set; }
+
+    private bool showForm = false;
+    private int newRecMemberId;
+    private decimal newRecTargetAmount;
+    private decimal newRecAmount;
+    private string newRecFrequency = "Monthly";
+    private DateTime newRecStartDate = DateTime.Today;
+    private DateTime? newRecEndDate = null;
+
+    private void CalculateRecAmount()
+    {
+        if (newRecTargetAmount > 0 && newRecEndDate.HasValue && newRecEndDate.Value >= newRecStartDate)
+        {
+            var span = newRecEndDate.Value - newRecStartDate;
+            int payments = 0;
+            if (newRecFrequency == "Weekly")
+                payments = (int)(span.TotalDays / 7) + 1;
+            else
+                payments = ((newRecEndDate.Value.Year - newRecStartDate.Year) * 12) + newRecEndDate.Value.Month - newRecStartDate.Month + 1;
+
+            if (payments > 0)
+                newRecAmount = Math.Round(newRecTargetAmount / payments, 2);
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        if (newRecMemberId <= 0 || newRecAmount <= 0) return;
+        await OnSaveSchedule.InvokeAsync((newRecMemberId, newRecAmount, newRecTargetAmount > 0 ? newRecTargetAmount : null, newRecFrequency, newRecStartDate, newRecEndDate));
+        showForm = false;
+        newRecMemberId = 0; newRecTargetAmount = 0; newRecAmount = 0;
+        newRecFrequency = "Monthly"; newRecStartDate = DateTime.Today; newRecEndDate = null;
+    }
+}

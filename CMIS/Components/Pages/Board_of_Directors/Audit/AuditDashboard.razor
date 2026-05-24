@@ -1,0 +1,146 @@
+@page "/board-of-directors/audit"
+@rendermode InteractiveServer
+@using CMIS.Components.Pages.Board_of_Directors.Audit.Components
+@using CMIS.Store.Audit
+@inject CMIS.Services.IFinancialService FinancialService
+@layout CMIS.Components.Layout.DashboardLayout
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-10">
+    @* Header Section *@
+    <AuditHeader />
+
+    @* Summary Cards *@
+    <FinancialSummaryCards Summaries="@summaries" Metrics="@metrics" AuditLogCount="@auditLogs.Count()" />
+
+    @* Analytics Section *@
+    <FinancialAnalytics />
+
+    @* Main Content Grid *@
+    <MudGrid Class="mt-6">
+        <MudItem xs="12">
+            <FinancialSummaryTable Summaries="@summaries" />
+        </MudItem>
+        
+        <MudItem xs="12" md="8">
+            <AuditLogSection AuditLogs="@auditLogs" />
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <CompliancePanel Metrics="@metrics" />
+            
+            @* Recurring Tithe Audit Section (Dynamic) *@
+            <MudCard Elevation="0" Class="premium-card mt-6">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <h3 class="report-title">Recurring Tithe Audit</h3>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent Class="pa-0">
+                    <MudList T="string">
+                        @if (recurringTithes.Any())
+                        {
+                            foreach (var r in recurringTithes.Take(5))
+                            {
+                                var color = r.Status == "Active" ? Color.Success : (r.Status == "Paused" ? Color.Warning : Color.Error);
+                                <MudListItem>
+                                    <div class="d-flex justify-space-between align-center">
+                                        <div>
+                                            <MudText Typo="Typo.body2" Class="fw-bold">@(r.Member?.FirstName) @(r.Member?.LastName)</MudText>
+                                            <MudText Typo="Typo.caption">@r.Frequency • ₱@r.Amount.ToString("N0")</MudText>
+                                        </div>
+                                        <MudChip T="string" Color="@color" Size="Size.Small">@r.Status</MudChip>
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        }
+                        else
+                        {
+                            <MudListItem>
+                                <MudText Typo="Typo.caption" Class="text-muted">No recurring tithes found.</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private List<CMIS.Models.RecurringTithe> recurringTithes = new();
+    private List<FinancialSummary> summaries = new();
+    private List<AuditLogEntry> auditLogs = new();
+    private ComplianceMetrics metrics = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllData();
+    }
+
+    private async Task LoadAllData()
+    {
+        // Load recurring tithes directly
+        recurringTithes = (await FinancialService.GetRecurringTithesAsync()).ToList();
+
+        // Build live summary from actual financial data
+        var live = await FinancialService.GetLiveSummaryAsync();
+        var liveSummary = new FinancialSummary
+        {
+            Id = "SUM-LIVE",
+            Period = live.SummaryPeriod,
+            TotalIncome = live.TotalIncome,
+            TotalExpenses = live.TotalExpenses,
+            NetBalance = live.NetBalance,
+            GeneratedBy = "System (Live)",
+            FinalizationDate = live.GeneratedDate,
+            Status = "Live"
+        };
+
+        // Load historical summaries
+        var dbSummaries = await FinancialService.GetSummariesAsync();
+        summaries = new List<FinancialSummary> { liveSummary };
+        if (dbSummaries.Any())
+        {
+            summaries.AddRange(dbSummaries.Select(s => new FinancialSummary
+            {
+                Id = $"SUM-{s.SummaryId}",
+                Period = s.SummaryPeriod,
+                TotalIncome = s.TotalIncome,
+                TotalExpenses = s.TotalExpenses,
+                NetBalance = s.NetBalance,
+                GeneratedBy = s.Generator != null ? $"{s.Generator.FirstName} {s.Generator.LastName}" : "System",
+                FinalizationDate = s.GeneratedDate,
+                Status = "Finalized"
+            }));
+        }
+
+        // Load audit logs directly
+        var dbAuditLogs = await FinancialService.GetAuditLogsAsync(20);
+        auditLogs = dbAuditLogs.Select(a => new AuditLogEntry
+        {
+            LogId = $"LOG-{a.AuditId}",
+            ActionType = a.ActionType,
+            Category = "Financial",
+            ModifiedBy = a.User != null ? $"{a.User.FirstName} {a.User.LastName}" : "System",
+            Timestamp = a.ActionDate,
+            PreviousValue = "N/A",
+            UpdatedValue = a.ActionDescription,
+            Source = "Financial Module",
+            ReferenceTable = a.ReferenceTable,
+            IntegrityStatus = a.Status
+        }).ToList();
+
+        // Compute compliance metrics
+        metrics = new ComplianceMetrics
+        {
+            AuditCompletionRate = auditLogs.Any()
+                ? (double)auditLogs.Count(l => l.IntegrityStatus == "Successful") / auditLogs.Count * 100
+                : 100,
+            RecordIntegrityVerified = auditLogs.All(l => l.IntegrityStatus == "Successful"),
+            TransparencyStatus = "High",
+            SummaryFrequencyDays = 30,
+            LastAuditDate = dbAuditLogs.Any() ? dbAuditLogs.Max(a => a.ActionDate) : DateTime.Now
+        };
+    }
+}

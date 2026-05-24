@@ -1,0 +1,356 @@
+@page "/board-of-directors/collections/{ChurchId:int}"
+@using CMIS.Models
+@using CMIS.Services
+@using CMIS.Components.Pages.Ministry_Head.Collection_Donation
+@inject IFinancialService FinancialService
+@inject NavigationManager Nav
+@layout CMIS.Components.Layout.DashboardLayout
+@rendermode InteractiveServer
+
+<PageTitle>Local Church Details — CMIS Portal</PageTitle>
+
+<div class="collection-root">
+    <div style="margin-bottom: 1.5rem;">
+        <button class="btn-secondary" @onclick='() => Nav.NavigateTo("/board-of-directors/collections")'>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back to District Collections
+        </button>
+    </div>
+
+    <!-- Page Heading -->
+    <div class="page-heading">
+        <h1 class="page-title">Local Church Financial Overview</h1>
+        <p class="page-subtitle">View only access to tithes, offerings, recurring donations, and reports for this local church.</p>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <button class="tab @(activeTab == "tithes" ? "active" : "")" @onclick='() => activeTab = "tithes"'>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Tithes &amp; Offerings
+        </button>
+        <button class="tab @(activeTab == "recurring" ? "active" : "")" @onclick='() => activeTab = "recurring"'>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Recurring Tithes
+        </button>
+        <button class="tab @(activeTab == "reports" ? "active" : "")" @onclick='() => activeTab = "reports"'>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Reports
+        </button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="sc-icon sc-icon-tithes">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="sc-info">
+                <span class="sc-label">Total Tithes</span>
+                <span class="sc-value">₱@totalTithes.ToString("N0")</span>
+                <span class="sc-trend trend-up">+12.5% this month</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon sc-icon-offerings">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div class="sc-info">
+                <span class="sc-label">Total Offerings</span>
+                <span class="sc-value">₱@totalOfferings.ToString("N0")</span>
+                <span class="sc-trend trend-up">+8.3% this month</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon sc-icon-expenses">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div class="sc-info">
+                <span class="sc-label">Total Expenses</span>
+                <span class="sc-value">₱@totalExpenses.ToString("N0")</span>
+                <span class="sc-trend trend-down">-4.2% this month</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="sc-icon sc-icon-balance">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <div class="sc-info">
+                <span class="sc-label">Net Balance</span>
+                <span class="sc-value net-positive">₱@netBalance.ToString("N0")</span>
+                <span class="sc-trend trend-up">Healthy</span>
+            </div>
+        </div>
+    </div>
+
+    @if (activeTab == "tithes")
+    {
+        <div class="segmented-control">
+            <button class="segment-btn @(titheSubTab == "tithes" ? "active" : "")" @onclick='() => titheSubTab = "tithes"'>Tithes</button>
+            <button class="segment-btn @(titheSubTab == "offerings" ? "active" : "")" @onclick='() => titheSubTab = "offerings"'>Offerings</button>
+            <button class="segment-btn @(titheSubTab == "donations" ? "active" : "")" @onclick='() => titheSubTab = "donations"'>Donations</button>
+        </div>
+
+        var currentList = titheSubTab == "tithes" ? filteredTithes
+                        : titheSubTab == "offerings" ? filteredOfferings
+                        : filteredDonations;
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ENTRY ID</th>
+                        <th>DONOR NAME</th>
+                        <th>AMOUNT</th>
+                        <th>DATE</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (currentList.Any())
+                    {
+                        @foreach (var d in currentList)
+                        {
+                            <tr>
+                                <td class="col-id">@d.Id</td>
+                                <td>
+                                    <div class="col-donor">
+                                        <span class="donor-name">@d.DonorName</span>
+                                        <span class="donor-sub">@d.Type · @d.Date.ToString("MMM dd, yyyy")</span>
+                                    </div>
+                                </td>
+                                <td class="col-amount">₱@d.Amount.ToString("N0")</td>
+                                <td>@d.Date.ToString("MMM dd, yyyy")</td>
+                                <td><span class="status-badge status-finalized"><span class="status-dot"></span>Finalized</span></td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5" class="empty-state">No records found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (activeTab == "recurring")
+    {
+        <div class="recurring-header">
+            <h2 class="form-title">Recurring Tithe Schedules</h2>
+        </div>
+        <div class="recurring-cards">
+            @foreach (var r in recurringTithes)
+            {
+                <div class="recurring-card">
+                    <div class="rc-top">
+                        <div class="rc-member">@r.MemberName</div>
+                        <span class="status-badge status-@r.Status.ToLower().Replace(" ","")">
+                            <span class="status-dot"></span>@r.Status
+                        </span>
+                    </div>
+                    <div class="rc-details">
+                        @if (r.TargetAmount.HasValue)
+                        {
+                            <div class="rc-detail">
+                                <span class="rc-label">Target Amount</span>
+                                <span class="rc-value" style="color: #0d6efd; font-weight:700;">₱@r.TargetAmount.Value.ToString("N0")</span>
+                            </div>
+                            <div class="rc-detail">
+                                <span class="rc-label">Remaining</span>
+                                <span class="rc-value" style="color: @(r.RemainingBalance <= 0 ? "#22c55e" : "#ef4444"); font-weight:700;">₱@r.RemainingBalance.ToString("N0")</span>
+                            </div>
+                        }
+                        <div class="rc-detail"><span class="rc-label">Calculated Amt</span><span class="rc-value">₱@r.ExpectedAmount.ToString("N0")</span></div>
+                        <div class="rc-detail"><span class="rc-label">Frequency</span><span class="rc-value">@r.Frequency</span></div>
+                        <div class="rc-detail"><span class="rc-label">Start Date</span><span class="rc-value">@r.StartDate.ToString("MMM dd, yyyy")</span></div>
+                        <div class="rc-detail">
+                            <span class="rc-label">Next Due</span>
+                            <span class="rc-value" style="color: @(r.NextDue < DateTime.Today ? "#ef4444" : "inherit");">@r.NextDue.ToString("MMM dd, yyyy")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (activeTab == "reports")
+    {
+        <ReportsTab
+            MonthlyData="monthlyData"
+            TotalIncome="totalTithes + totalOfferings"
+            TotalExpenses="totalExpenses"
+            NetBalance="netBalance"
+            IncomePercent="incomePercent"
+            ExpensePercent="expensePercent"
+            Schedules="recurringTithes" />
+    }
+</div>
+
+<style>
+/* Base Styles matching the Ministry Head Collection page */
+.collection-root { padding: 0 1rem; }
+.page-heading { margin-bottom: 1.5rem; }
+.page-title { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.65rem; color: #0d2137; margin: 0 0 0.3rem; }
+.page-subtitle { font-family: 'Inter', sans-serif; font-size: 0.88rem; color: #6b7c93; margin: 0; }
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid #e8ecf1; margin-bottom: 1.25rem; }
+.tab { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.1rem; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; color: #6b7c93; text-decoration: none; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
+.tab:hover { color: #0d2137; }
+.tab.active { color: #0d2137; border-bottom-color: #0d2137; }
+.summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.summary-card { display: flex; align-items: center; gap: 1rem; background: #ffffff; border: 1px solid #e8ecf1; border-radius: 12px; padding: 1.15rem 1.25rem; transition: box-shadow 0.25s, transform 0.2s; }
+.summary-card:hover { box-shadow: 0 6px 20px rgba(13, 33, 55, 0.08); transform: translateY(-2px); }
+.sc-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sc-icon-tithes { background: #eaf2f8; color: #1a5276; }
+.sc-icon-offerings { background: #fef5e7; color: #d4ac0d; }
+.sc-icon-expenses { background: #fdedec; color: #c0392b; }
+.sc-icon-balance { background: #eafaf1; color: #1e8449; }
+.sc-info { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.sc-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #8e99a4; text-transform: uppercase; letter-spacing: 0.05em; }
+.sc-value { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.25rem; color: #0d2137; white-space: nowrap; }
+.sc-value.net-positive { color: #1e8449; }
+.sc-trend { font-family: 'Inter', sans-serif; font-size: 0.68rem; font-weight: 600; }
+.trend-up { color: #27ae60; }
+.trend-down { color: #c0392b; }
+
+/* Tables and segmented control */
+.segmented-control { display: flex; background: #f0f4f8; padding: 0.25rem; border-radius: 50px; margin-bottom: 1.5rem; width: fit-content; border: 1px solid #e2e8f0; }
+.segment-btn { padding: 0.5rem 2rem; border-radius: 50px; border: none; background: transparent; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; color: #6b7c93; cursor: pointer; transition: all 0.25s ease; min-width: 120px; }
+.segment-btn.active { background: #ffffff; color: #0d2137; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+.table-container { background: #ffffff; border-radius: 12px; border: 1px solid #e8ecf1; overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 0.84rem; }
+.data-table thead { background: #f8fafc; }
+.data-table th { padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.75rem; color: #6b7c93; text-transform: uppercase; border-bottom: 1px solid #e8ecf1; }
+.data-table td { padding: 0.85rem 1rem; color: #2c3e50; border-bottom: 1px solid #f0f3f6; }
+.col-donor { display: flex; flex-direction: column; gap: 0.15rem; }
+.donor-name { font-weight: 600; color: #0d2137; }
+.donor-sub { font-size: 0.75rem; color: #8e99a4; }
+.col-amount { font-weight: 700; color: #0d2137; }
+
+/* Recurring Cards */
+.recurring-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+.form-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.05rem; color: #0d2137; margin: 0; }
+.recurring-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.recurring-card { background: #ffffff; border: 1.5px solid #e8ecf1; border-radius: 12px; padding: 1.25rem; transition: box-shadow 0.25s, border-color 0.2s; }
+.rc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.rc-member { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 0.95rem; color: #0d2137; }
+.rc-details { display: flex; flex-direction: column; gap: 0.55rem; }
+.rc-detail { display: flex; justify-content: space-between; align-items: center; }
+.rc-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; color: #8e99a4; }
+.rc-value { font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; color: #0d2137; }
+
+/* Badges and Buttons */
+.status-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.status-finalized  { background: #eafaf1; color: #1e8449; }
+.status-finalized .status-dot  { background: #27ae60; }
+.status-active { background: #e6f9f0; color: #1a7a4a; }
+.status-active .status-dot { background: #22c55e; }
+
+.btn-secondary { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.2rem; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600; color: #6b7c93; background: #f0f4f8; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.btn-secondary:hover { background: #e2e8f0; color: #0d2137; }
+
+/* ---------- REPORTS ---------- */
+.report-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+.report-card { background: #ffffff; border: 1px solid #e8ecf1; border-radius: 12px; padding: 1.5rem; }
+.report-card.full-width { grid-column: 1 / -1; }
+.report-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1rem; color: #0d2137; margin: 0 0 1.25rem; }
+.chart-placeholder { padding: 0.5rem 0; }
+.chart-bars { display: flex; align-items: flex-end; gap: 1.25rem; height: 160px; padding: 0 0.5rem; }
+.chart-bar-group { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; flex: 1; }
+.chart-bar { width: 100%; background: linear-gradient(180deg, #1a5276, #2e86c1); border-radius: 6px 6px 0 0; min-height: 8px; transition: height 0.6s ease; }
+.chart-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; color: #8e99a4; font-weight: 600; }
+.comparison-list { display: flex; flex-direction: column; gap: 0.85rem; }
+.comp-row { display: flex; justify-content: space-between; align-items: center; }
+.comp-row.comp-net { padding-top: 0.75rem; border-top: 1px solid #e8ecf1; }
+.comp-label { font-family: 'Inter', sans-serif; font-size: 0.82rem; color: #6b7c93; }
+.comp-value { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1rem; }
+.comp-value.income  { color: #1e8449; }
+.comp-value.expense { color: #c0392b; }
+.comp-bar-track { height: 10px; background: #fdedec; border-radius: 5px; overflow: hidden; margin-top: 0.5rem; }
+.comp-bar-income { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 5px; transition: width 0.6s ease; }
+.comp-legend { display: flex; gap: 1.25rem; margin-top: 0.5rem; }
+.legend-item { display: flex; align-items: center; gap: 0.35rem; font-family: 'Inter', sans-serif; font-size: 0.72rem; color: #6b7c93; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.income-dot  { background: #27ae60; }
+.expense-dot { background: #e74c3c; }
+.completion-stats { display: flex; gap: 2rem; justify-content: center; padding: 1rem 0; }
+.comp-stat { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+.cs-value { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 2rem; color: #0d2137; }
+.cs-label { font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600; color: #8e99a4; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Status Badges for Reports */
+.status-upcoming   { background: #eaf2f8; color: #1a5276; }
+.status-upcoming .status-dot   { background: #2e86c1; }
+.status-completed  { background: #eafaf1; color: #1e8449; }
+.status-completed .status-dot  { background: #27ae60; }
+.status-missed     { background: #fdedec; color: #c0392b; }
+.status-missed .status-dot     { background: #e74c3c; }
+.status-paused     { background: #fef9e7; color: #9a7d0a; }
+.status-paused .status-dot     { background: #f0b429; }
+.status-cancelled  { background: #fdedec; color: #c0392b; }
+.status-cancelled .status-dot  { background: #e74c3c; }
+</style>
+
+@code {
+    [Parameter] public int ChurchId { get; set; }
+
+    private string activeTab = "tithes";
+    private string titheSubTab = "tithes";
+
+    private List<DonationEntry> donations = new();
+    private List<RecurringEntry> recurringTithes = new();
+    private Dictionary<string, int> monthlyData = new();
+    private decimal totalExpenses = 0;
+
+    private decimal totalTithes => donations.Where(d => d.Type == "Tithe").Sum(d => d.Amount);
+    private decimal totalOfferings => donations.Where(d => d.Type == "Offering").Sum(d => d.Amount);
+    private decimal netBalance => totalTithes + totalOfferings - totalExpenses;
+    private int incomePercent => (totalTithes + totalOfferings + totalExpenses) == 0 ? 50 : (int)((totalTithes + totalOfferings) * 100 / (totalTithes + totalOfferings + totalExpenses));
+    private int expensePercent => 100 - incomePercent;
+
+    private List<DonationEntry> filteredTithes => donations.Where(d => d.Type == "Tithe").ToList();
+    private List<DonationEntry> filteredOfferings => donations.Where(d => d.Type == "Offering").ToList();
+    private List<DonationEntry> filteredDonations => donations.Where(d => d.Type == "Donation").ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // For demonstration, we load all incomes but realistically we'd filter by ChurchId.
+        // We will just load all data since this mirrors the Ministry_Head component's fetching style.
+        var incomes = await FinancialService.GetIncomesAsync();
+        donations = incomes
+            .Select(i => new DonationEntry(
+                i.IncomeId.ToString(),
+                i.Member != null ? $"{i.Member.FirstName} {i.Member.LastName}" : "General",
+                i.IncomeType,
+                i.Amount,
+                i.EntryDate))
+            .ToList();
+
+        var dbRecurring = await FinancialService.GetRecurringTithesAsync();
+        recurringTithes = dbRecurring
+            .Select(r => {
+                var startDateTime = r.StartDate.ToDateTime(TimeOnly.MinValue);
+                decimal actualPaid = incomes
+                    .Where(i => i.MemberId == r.MemberId && i.IncomeType == "Tithe" && i.EntryDate >= startDateTime)
+                    .Sum(i => i.Amount);
+
+                decimal remaining = r.TargetAmount.HasValue ? Math.Max(0, r.TargetAmount.Value - actualPaid) : 0;
+                return new RecurringEntry(
+                    r.RecurringId, r.MemberId, r.Member.FirstName + " " + r.Member.LastName, r.Amount, r.Frequency,
+                    startDateTime, r.NextDueDate.ToDateTime(TimeOnly.MinValue), r.EndDate?.ToDateTime(TimeOnly.MinValue),
+                    r.TargetAmount, actualPaid, remaining, r.Status);
+            }).ToList();
+
+        var last6Months = Enumerable.Range(0, 6).Select(i => DateTime.Today.AddMonths(-i)).Reverse().ToList();
+        var monthlySums = last6Months.Select(m => new {
+            MonthName = m.ToString("MMM"),
+            Total = donations.Where(d => d.Date.Year == m.Year && d.Date.Month == m.Month).Sum(d => d.Amount)
+        }).ToList();
+
+        decimal maxMonthly = monthlySums.Max(m => m.Total);
+        if (maxMonthly == 0) maxMonthly = 1; 
+
+        monthlyData = monthlySums.ToDictionary(m => m.MonthName, m => (int)(m.Total * 100 / maxMonthly));
+    }
+}

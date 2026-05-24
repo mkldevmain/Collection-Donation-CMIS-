@@ -1,0 +1,411 @@
+@using CMIS.Data
+@using CMIS.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+
+<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13, 33, 55, 0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
+    <div style="background: white; width: 100%; max-width: 660px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-height: 95vh; font-family: 'Inter', sans-serif;">
+
+        @* ──────────── MODAL HEADER ──────────── *@
+        <div style="padding: 1.5rem; border-bottom: 1px solid #e8ecf1; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div style="background: #0d2137; color: white; width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.3rem; color: #0d2137;">
+                        @(EditProfileId.HasValue ? "Edit Staff Member" : "Add New Staff Member")
+                    </h2>
+                    <p style="margin: 0; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: #6b7c93;">
+                        @(EditProfileId.HasValue ? "Update staff information" : "Add a new staff member to your organization")
+                    </p>
+                </div>
+            </div>
+            <button type="button" @onclick="OnClose" style="background: transparent; border: none; cursor: pointer; color: #6b7c93; padding: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        @* ──────────── SCROLLABLE BODY ──────────── *@
+        <div style="padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.2rem;">
+
+            @* ── Error Banner ── *@
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                    @errorMessage
+                </div>
+            }
+
+            @* ═══ SECTION: Personal Information ═══ *@
+            <h3 style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1rem; color: #0d2137; margin: 0 0 0.8rem 0;">Personal Information</h3>
+
+            @* First Name *@
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                    First Name <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="text" @bind="firstName" placeholder="Enter First Name" style="@InputStyle" />
+            </div>
+
+            @* Middle Name + Last Name *@
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Middle Name <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="text" @bind="middleName" placeholder="Enter Middle Name" style="@InputStyle" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Last Name <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="text" @bind="lastName" placeholder="Enter Last Name" style="@InputStyle" />
+                </div>
+            </div>
+
+            @* Address + DOB *@
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Address <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="text" @bind="address" placeholder="Enter Address" style="@InputStyle" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Date of Birth <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="date" @bind="dateOfBirth" style="@InputStyle" />
+                </div>
+            </div>
+
+            @* ── Separator ── *@
+            <hr style="border: none; border-top: 1px solid #e8ecf1; margin: 0.8rem 0 1.2rem 0;" />
+
+            @* ═══ SECTION: Account Details ═══ *@
+            <h3 style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1rem; color: #0d2137; margin: 0 0 0.8rem 0;">Account Details</h3>
+
+            @* User Role + Assigned Church *@
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        User Role <span style="color: #dc2626;">*</span>
+                    </label>
+                    <select @bind="selectedRoleId" style="@InputStyle; background: white; appearance: auto;">
+                        <option value="0">Select Role</option>
+                        @foreach (var role in roles)
+                        {
+                            <option value="@role.RoleId">@role.RoleName</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <CMIS.Components.Shared.SearchableDropdown
+                        Label='Assigned Church'
+                        Placeholder="Select Church"
+                        Items="churchDropdownItems"
+                        SelectedId="selectedChurchId"
+                        OnItemSelected="HandleChurchSelected" />
+                </div>
+            </div>
+
+            @* Email + Phone *@
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Email <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="email" @bind="email" placeholder="Enter Email Address" style="@InputStyle" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Phone Number <span style="color: #dc2626;">*</span>
+                    </label>
+                    <div style="display: flex; gap: 0.4rem;">
+                        <input type="text" value="(+63)" readonly style="@InputStyle; width: 60px; text-align: center; background: #f8fafc; color: #6b7c93; flex-shrink: 0;" />
+                        <input type="text" @bind="phoneNumber" placeholder="9XX XXX XXXX" style="@InputStyle" />
+                    </div>
+                </div>
+            </div>
+
+            @* Password + Confirm Password *@
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Password @if (!EditProfileId.HasValue) { <span style="color: #dc2626;">*</span> }
+                    </label>
+                    <input type="password" @bind="password" placeholder="@(EditProfileId.HasValue ? "(Leave blank to keep current)" : "••••••••••")" style="@InputStyle" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #0d2137; margin-bottom: 0.4rem;">
+                        Confirm Password @if (!EditProfileId.HasValue) { <span style="color: #dc2626;">*</span> }
+                    </label>
+                    <input type="password" @bind="confirmPassword" placeholder="@(EditProfileId.HasValue ? "(Leave blank to keep current)" : "••••••••••")" style="@InputStyle" />
+                </div>
+            </div>
+        </div>
+
+        @* ──────────── FOOTER ──────────── *@
+        <div style="padding: 1.2rem 1.5rem; border-top: 1px solid #e8ecf1; display: flex; justify-content: center; gap: 0.8rem; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+            <button type="button" @onclick="OnClose"
+                    style="padding: 0.6rem 1.5rem; background: white; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;">
+                Cancel
+            </button>
+            <button type="button" @onclick="SaveStaff" disabled="@isSaving"
+                    style="padding: 0.6rem 1.5rem; background: #0d2137; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; opacity: @(isSaving ? "0.6" : "1");">
+                @(isSaving ? "Saving..." : (EditProfileId.HasValue ? "Update Staff Member" : "Add New Staff Member"))
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? EditProfileId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSuccess { get; set; }
+
+    // ── Input style constant ──
+    private const string InputStyle = "width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #0d2137; outline: none;";
+
+    // ── Personal Info Fields ──
+    private string firstName = "";
+    private string middleName = "";
+    private string lastName = "";
+    private string address = "";
+    private DateTime? dateOfBirth;
+
+    // ── Account Detail Fields ──
+    private int selectedRoleId = 0;
+    private int selectedChurchId = 0;
+    private string email = "";
+    private string phoneNumber = "";
+    private string password = "";
+    private string confirmPassword = "";
+
+    // ── UI State ──
+    private string errorMessage = "";
+    private bool isSaving = false;
+
+    // ── Dropdown data ──
+    private List<Role> roles = new();
+    private List<Church> churches = new();
+    private List<CMIS.Components.Shared.SearchableDropdown.DropdownItem> churchDropdownItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        roles = await Db.Roles.OrderBy(r => r.RoleName).ToListAsync();
+        churches = await Db.Churches.OrderBy(c => c.ChurchName).ToListAsync();
+
+        churchDropdownItems = churches.Select(c => new CMIS.Components.Shared.SearchableDropdown.DropdownItem
+        {
+            Id = c.ChurchId,
+            Name = c.ChurchName
+        }).ToList();
+
+        if (EditProfileId.HasValue)
+        {
+            var profile = await Db.Profiles
+                .Include(p => p.Account)
+                .Include(p => p.LeadershipAssignments)
+                .FirstOrDefaultAsync(p => p.ProfileId == EditProfileId.Value);
+
+            if (profile != null)
+            {
+                firstName = profile.FirstName;
+                middleName = profile.MiddleName ?? "";
+                lastName = profile.LastName;
+                address = profile.Address ?? "";
+                
+                if (profile.BirthDate.HasValue)
+                {
+                    dateOfBirth = profile.BirthDate.Value;
+                }
+
+                if (profile.Account != null)
+                {
+                    selectedRoleId = profile.Account.RoleId;
+                    email = profile.Account.Email;
+                }
+
+                var activeAssignment = profile.LeadershipAssignments.FirstOrDefault(la => la.Status == "Active");
+                if (activeAssignment != null && activeAssignment.ChurchId.HasValue)
+                {
+                    selectedChurchId = activeAssignment.ChurchId.Value;
+                }
+                
+                phoneNumber = profile.ContactNumber ?? "";
+            }
+        }
+    }
+
+    private void HandleChurchSelected(int churchId)
+    {
+        selectedChurchId = churchId;
+    }
+
+    // ──────────── VALIDATION ────────────
+    private bool Validate()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(firstName))       { errorMessage = "First Name is required."; return false; }
+        if (string.IsNullOrWhiteSpace(middleName))      { errorMessage = "Middle Name is required."; return false; }
+        if (string.IsNullOrWhiteSpace(lastName))         { errorMessage = "Last Name is required."; return false; }
+        if (string.IsNullOrWhiteSpace(address))          { errorMessage = "Address is required."; return false; }
+        if (dateOfBirth == null)                          { errorMessage = "Date of Birth is required."; return false; }
+        if (selectedRoleId == 0)                          { errorMessage = "Please select a User Role."; return false; }
+        if (selectedChurchId == 0)                        { errorMessage = "Please select an Assigned Church."; return false; }
+        if (string.IsNullOrWhiteSpace(email))            { errorMessage = "Email is required."; return false; }
+        if (string.IsNullOrWhiteSpace(phoneNumber))      { errorMessage = "Phone Number is required."; return false; }
+
+        if (!EditProfileId.HasValue)
+        {
+            if (string.IsNullOrWhiteSpace(password))         { errorMessage = "Password is required."; return false; }
+            if (password.Length < 6)                           { errorMessage = "Password must be at least 6 characters."; return false; }
+            if (password != confirmPassword)                  { errorMessage = "Passwords do not match."; return false; }
+        }
+        else if (!string.IsNullOrWhiteSpace(password))
+        {
+            if (password.Length < 6)                           { errorMessage = "Password must be at least 6 characters."; return false; }
+            if (password != confirmPassword)                  { errorMessage = "Passwords do not match."; return false; }
+        }
+
+        return true;
+    }
+
+    // ──────────── SAVE: THE TRIPLE-INSERT ────────────
+    private async Task SaveStaff()
+    {
+        if (!Validate()) return;
+
+        isSaving = true;
+        errorMessage = "";
+
+        try
+        {
+            // ── Check email uniqueness ──
+            var emailExists = EditProfileId.HasValue
+                ? await Db.Accounts.AnyAsync(a => a.Email == email && a.ProfileId != EditProfileId.Value)
+                : await Db.Accounts.AnyAsync(a => a.Email == email);
+            
+            if (emailExists)
+            {
+                errorMessage = "An account with this email already exists.";
+                isSaving = false;
+                return;
+            }
+
+            if (EditProfileId.HasValue)
+            {
+                // ═══ UPDATE EXISTING ═══
+                var profile = await Db.Profiles
+                    .Include(p => p.Account)
+                    .Include(p => p.LeadershipAssignments)
+                    .FirstOrDefaultAsync(p => p.ProfileId == EditProfileId.Value);
+
+                if (profile != null)
+                {
+                    profile.ChurchId = selectedChurchId;
+                    profile.FirstName = firstName.Trim();
+                    profile.MiddleName = middleName.Trim();
+                    profile.LastName = lastName.Trim();
+                    profile.BirthDate = dateOfBirth;
+                    profile.ContactNumber = phoneNumber.Trim();
+                    profile.Address = address.Trim();
+
+                    if (profile.Account != null)
+                    {
+                        profile.Account.RoleId = selectedRoleId;
+                        profile.Account.Username = email.Trim();
+                        profile.Account.Email = email.Trim();
+                        if (!string.IsNullOrWhiteSpace(password))
+                        {
+                            profile.Account.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+                        }
+                    }
+
+                    var activeAssignment = profile.LeadershipAssignments.FirstOrDefault(la => la.Status == "Active");
+                    if (activeAssignment != null)
+                    {
+                        activeAssignment.RoleId = selectedRoleId;
+                        activeAssignment.ChurchId = selectedChurchId;
+                    }
+                    else
+                    {
+                        var assignment = new LeadershipAssignment
+                        {
+                            ProfileId = profile.ProfileId,
+                            RoleId = selectedRoleId,
+                            ChurchId = selectedChurchId,
+                            AssignedDate = DateTime.Now,
+                            Status = "Active"
+                        };
+                        Db.LeadershipAssignments.Add(assignment);
+                    }
+
+                    await Db.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                // ═══ STEP 1: Create Profile ═══
+                var profile = new Profile
+                {
+                    ChurchId = selectedChurchId,
+                    FirstName = firstName.Trim(),
+                    MiddleName = middleName.Trim(),
+                    LastName = lastName.Trim(),
+                    Sex = "Male",
+                    BirthDate = dateOfBirth,
+                    ContactNumber = phoneNumber.Trim(),
+                    Address = address.Trim(),
+                    IsMember = true,
+                    ProfileStatus = "Active",
+                    CreatedAt = DateTime.Now
+                };
+
+                Db.Profiles.Add(profile);
+                await Db.SaveChangesAsync();
+
+                // ═══ STEP 2: Create Account (linked to Profile) ═══
+                var account = new Account
+                {
+                    ProfileId = profile.ProfileId,
+                    RoleId = selectedRoleId,
+                    Username = email.Trim(),
+                    Email = email.Trim(),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                    Status = "Active",
+                    CreatedAt = DateTime.Now
+                };
+
+                Db.Accounts.Add(account);
+                await Db.SaveChangesAsync();
+
+                // ═══ STEP 3: Create LeadershipAssignment ═══
+                var assignment = new LeadershipAssignment
+                {
+                    ProfileId = profile.ProfileId,
+                    RoleId = selectedRoleId,
+                    ChurchId = selectedChurchId,
+                    AssignedDate = DateTime.Now,
+                    Status = "Active"
+                };
+
+                Db.LeadershipAssignments.Add(assignment);
+                await Db.SaveChangesAsync();
+            }
+
+            await OnSuccess.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

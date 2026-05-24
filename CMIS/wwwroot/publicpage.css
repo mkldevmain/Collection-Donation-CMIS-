@@ -1,0 +1,66 @@
+.pblc-searchinput {
+    box-sizing: border-box;
+    padding: 0.6rem 1rem;
+    border: 1px solid #01224D30;
+    color: #0d2137;
+    border-radius: 15px;
+    font-weight: 400;
+    font-family: "Inter", sans-serif;
+    width: 100%;
+    background: transparent;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.pblc-searchinput:hover {
+    border-color: #01224d;
+}
+
+.pblc-searchinput:focus {
+    border-color: #01224d;
+}
+
+.pblc-searchinput::placeholder {
+    color: rgba(1, 34, 77, 0.5);
+    font-weight: 400;
+    font-family: "Inter", sans-serif;
+}
+
+.pblc-mainbutton {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+
+    border: 1px solid transparent;
+    border-radius: 15px;
+    color: white;
+    background:
+        linear-gradient(to bottom, #0c3d7d, #01224d) padding-box,
+        linear-gradient(to bottom, #5679b9, #FFFFFF) border-box;
+
+    font-weight: 400;
+    font-family: "Degular Display", sans-serif;
+    font-size: 1.3rem;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.pblc-mainbutton i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pblc-mainbutton:hover {
+    opacity: 0.9;
+}

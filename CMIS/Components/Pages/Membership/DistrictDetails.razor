@@ -1,0 +1,211 @@
+@page "/districts/details/{Id:int}"
+@layout AdminLayout
+@using CMIS.Data
+@using Models = CMIS.Models @* Create an alias to avoid the collision *@
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@if (district == null)
+{
+    <p>Loading District Details...</p>
+}
+else
+{
+    <div style="padding: 2rem; font-family: 'Inter', sans-serif; min-height: 100vh;">
+        <CMIS.Components.Shared.PageHeader Title="@district.DistrictName" ShowBackButton="true" BackUrl="/membership/districts" />
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 1rem; background: white; padding: 1.2rem; border-radius: 20px; gap: 1rem; border: 1px solid #e2e8f0;">
+            <div style="display: flex; flex-direction: row; gap: 1rem;">
+                <div class="icon-box" style="font-size: 1.3rem; color: #10b981; background-color: #10b98115;">
+                    <i class="fi fi-rs-marker" style="display: flex;"></i>
+                </div>
+                <div>
+                    <div class="label">Address</div>
+                    <div class="value">@(district.Address ?? "No Address Set")</div>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: row; gap: 1rem;">
+                <div class="icon-box" style="font-size: 1.3rem; color: #FFC107; background-color: #FFC10715;">
+                    <i class="fi fi-rr-flag" style="display: flex;"></i>
+                </div>
+                <div>
+                    <div class="label">District Head</div>
+                    <div class="value">@(districtHead?.FirstName ?? "Unassigned") @districtHead?.LastName</div>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: row; gap: 1rem;">
+                <div class="icon-box" style="font-size: 1.3rem; color: #006FFF; background-color: #006FFF15;">
+                    <i class="fi fi-rr-church" style="display: flex;"></i>
+                </div>
+                <div>
+                    <div class="label">Total Churches</div>
+                    <div class="value">@district.Churches.Count</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+            <div style="font-family: 'Inter', sans-serif;">
+                <div style="background: white; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+                    <img src="https://images.pexels.com/photos/31893708/pexels-photo-31893708.jpeg" style="width: 100%; height: 350px; object-fit: cover;" />
+                    <div style="padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <h3 style="color: #0d2137; margin-bottom: 0.2rem; font-size: 1.4rem; font-weight: 500;">@district.Address</h3>
+                                <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1rem;">Established: Dec 12, 2024</div>
+                            </div>
+                            <button type="button" @onclick="OpenEditModal" style="background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 0.4rem 1.2rem; color: #64748b; font-size: 0.85rem; font-weight: 500; cursor: pointer;">Edit</button>
+                        </div>
+                        
+                        <h3 style="color: #0d2137; font-size: 0.9rem; margin-bottom: 0.2rem;">About District</h3>
+                        <p style="color: #94a3b8; line-height: 1.5; font-size: 0.95rem;">
+                            @(district.Description ?? "No description provided for this district.")
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="position: relative; height: 100%;">
+        @* The absolute positioning stops this box from forcing the grid to grow taller *@
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 1.5rem; font-family: 'Inter', sans-serif; display: flex; flex-direction: column;">
+            
+            @* Header section (flex-shrink: 0 ensures this header never gets squished) *@
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-shrink: 0;">
+                <h3 style="color: #0d2137; margin: 0;  font-size: 1.2rem;">Local Churches</h3>
+                <button class="mmbr-createbutton" style="gap: 2px; padding-left: 0.6rem; " @onclick="OpenModal">
+                    <i class="fi fi-rr-plus-small" style="display: flex; align-self: center; font-size: 1.3rem;"></i> Create New
+                </button>
+            </div>
+            
+            @* Scrollable List Area (flex-grow: 1 makes it fill the remaining space, overflow-y allows scrolling) *@
+            <div style="display: flex; flex-direction: column; gap: 0.9rem; overflow-y: auto; flex-grow: 1; padding-right: 0.4rem;">
+                @foreach (var church in district.Churches)
+                {
+                    <div class="church-item-card" @onclick='() => Nav.NavigateTo($"/churches/details/{church.ChurchId}")'>
+                        <div style="font-weight: 500; color: #0d2137; margin-bottom: 0.2rem;">@church.ChurchName</div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; display: flex; align-items: center; gap: 0.4rem;">
+                            <i class="fi fi-rs-marker" style="display: flex;"></i>
+                            @church.Address
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem;">
+                            <div style="font-size: 0.8rem; color: #335580; font-weight: 500;">
+                                Pastor @GetPastorName(church)
+                            </div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fi fi-rr-users"></i>
+                                @church.Profiles.Count
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+        </div>
+    </div>
+    
+    @if (isModalOpen)
+    {
+        <CMIS.Components.Dialogs.ChurchCreationDialog PreselectedDistrictId="district.DistrictId" OnClose="CloseModal" OnSuccess="HandleSuccess" />
+    }
+
+    @if (isEditModalOpen)
+    {
+        <CMIS.Components.Dialogs.DistrictCreationDialog EditDistrictId="editDistrictId" OnClose="CloseEditModal" OnSuccess="HandleEditSuccess" />
+    }
+}
+
+<style>
+    .stat-card { background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 1rem; }
+    .icon-box { 
+        background: #f1f5f9; 
+        color: #0d2137; 
+        border-radius: 12px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        box-sizing: border-box; 
+        padding: 0; /* Padding is 0 for fixed size icons, centering is handled by flex */
+        width: 45px;
+        height: 45px;
+    }
+    .label { font-size: 0.8rem; color: #64748b; font-weight: 500; }
+    .value { font-size: 1.1rem; color: #0d2137; font-weight: 500; }
+    .church-item-card { background: white; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; }
+    .church-item-card:hover { border-color: #2b5881ff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .add-btn { background: #0d2137; color: white; border: none; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Models.District? district; @* Explicitly use the model *@
+    private Models.Profile? districtHead;
+    private bool isModalOpen = false;
+    private bool isEditModalOpen = false;
+    private int editDistrictId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDistrict();
+    }
+
+    private async Task LoadDistrict()
+    {
+        district = await Db.Districts
+            .Include(d => d.Churches)
+                .ThenInclude(c => c.Profiles)
+            .Include(d => d.Churches)
+                .ThenInclude(c => c.LeadershipAssignments)
+                    .ThenInclude(la => la.Profile)
+            .Include(d => d.LeadershipAssignments)
+                .ThenInclude(la => la.Profile)
+            .FirstOrDefaultAsync(d => d.DistrictId == Id);
+
+        if (district != null)
+        {
+            // CHANGED: Use 2 for District Head
+            districtHead = district.LeadershipAssignments
+                .Where(la => la.RoleId == 2 && la.Status == "Active")
+                .Select(la => la.Profile)
+                .FirstOrDefault();
+        }
+    }
+
+    private void OpenModal() => isModalOpen = true;
+    private void CloseModal() => isModalOpen = false;
+
+    private async Task HandleSuccess()
+    {
+        isModalOpen = false;
+        await LoadDistrict();
+        StateHasChanged();
+    }
+
+    private void OpenEditModal() 
+    {
+        editDistrictId = Id;
+        isEditModalOpen = true;
+    }
+    
+    private void CloseEditModal() => isEditModalOpen = false;
+    
+    private async Task HandleEditSuccess()
+    {
+        isEditModalOpen = false;
+        await LoadDistrict();
+        StateHasChanged();
+    }
+
+    private string GetPastorName(Models.Church church)
+    {
+        // CHANGED: Use 1 for Head Pastor
+        var pastor = church.LeadershipAssignments
+            .Where(la => la.RoleId == 1 && la.Status == "Active")
+            .Select(la => la.Profile)
+            .FirstOrDefault();
+
+        return pastor != null ? $"{pastor.FirstName} {pastor.LastName}" : "TBD";
+    }
+}

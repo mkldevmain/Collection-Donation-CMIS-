@@ -1,0 +1,130 @@
+﻿@page "/ministry-head/financial/monitoring"
+@layout CMIS.Components.Layout.DashboardLayout
+@using CMIS.Data
+@using CMIS.Services
+@using CMIS.Services.FinancialApi
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@inject IFinancialApiClient FinancialApi
+@inject CustomAuthStateProvider AuthStateProvider
+@rendermode InteractiveServer
+
+<PageTitle>Monitoring — Ministry Head</PageTitle>
+
+<div class="page-heading">
+    <h1 class="page-title">Financial Management</h1>
+    <p class="page-subtitle">Manage budgets, track expenses, and monitor financial health.</p>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+    <a href="/ministry-head/financial/proposals" data-enhance-nav="false" class="tab"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Budget Proposals</a>
+    <a href="/ministry-head/financial/transactions" data-enhance-nav="false" class="tab"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Transactions</a>
+    <a href="/ministry-head/financial/monitoring" data-enhance-nav="false" class="tab active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Monitoring</a>
+    <a href="/ministry-head/financial/reports" data-enhance-nav="false" class="tab"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Reports</a>
+</div>
+
+<!-- Wallet Widget -->
+@{
+    var walletTotal = allocations.Sum(a => a.Allocated);
+    var walletSpent = allocations.Sum(a => a.Spent);
+    var walletAvailable = walletTotal - walletSpent;
+}
+<div style="background:linear-gradient(135deg,#0d2137 0%,#1a3a5c 55%,#0d3060 100%);border-radius:16px;padding:1.6rem 2rem;margin-bottom:2rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;box-shadow:0 4px 24px rgba(13,33,55,0.2);position:relative;overflow:hidden;">
+    <div style="position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.05);pointer-events:none;"></div>
+    <div style="position:absolute;right:60px;bottom:-60px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
+    <div style="display:flex;align-items:center;gap:1.5rem;flex:1;min-width:0;position:relative;">
+        <div style="background:rgba(255,255,255,0.12);border-radius:14px;padding:1rem;flex-shrink:0;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3.5v3M8 3.5v3"/><circle cx="17" cy="14" r="1.5" fill="white" stroke="none"/></svg>
+        </div>
+        <div>
+            <div style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;">Available Balance</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:2.2rem;color:#fff;line-height:1;">$@walletAvailable.ToString("N0")</div>
+            <div style="font-family:'Inter',sans-serif;font-size:0.72rem;color:rgba(255,255,255,0.45);margin-top:0.25rem;">@DateTime.Now.ToString("MMMM yyyy")</div>
+        </div>
+    </div>
+    <div style="width:1px;height:70px;background:rgba(255,255,255,0.15);flex-shrink:0;position:relative;"></div>
+    <div style="display:flex;gap:2.5rem;flex-shrink:0;position:relative;">
+        <div style="text-align:center;">
+            <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Total Allocated</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.2rem;color:#f0c040;">$@walletTotal.ToString("N0")</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Spent</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.2rem;color:#e07070;">$@walletSpent.ToString("N0")</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Allocations</div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.2rem;color:#fff;">@allocations.Count</div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget Allocations -->
+@if (allocations.Any())
+{
+    <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1rem;color:#0d2137;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #e8ecf1;">Budget Allocations</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-bottom:2rem;">
+        @foreach (var a in allocations)
+        {
+            var pct = a.Utilization;
+            var accent = pct > 75 ? "#c0392b" : pct > 50 ? "#e67e22" : "#27ae60";
+            <div style="background:#fff;border:1px solid #e2e8f0;border-top:4px solid @accent;border-radius:12px;padding:1.2rem 1.3rem;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                    <h3 style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1rem;color:#0d2137;margin:0;">@a.Name</h3>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                    <span style="font-family:'Inter',sans-serif;font-size:0.8rem;color:#6b7c93;">Utilization</span>
+                    <span style="font-family:'Inter',sans-serif;font-size:0.8rem;font-weight:600;color:#0d2137;">@(pct.ToString("F1"))%</span>
+                </div>
+                <div style="height:7px;background:#e8ecf1;border-radius:4px;overflow:hidden;margin-bottom:1.1rem;">
+                    <div style="height:100%;width:@(Math.Min(pct,100).ToString("F0"))%;background:@accent;border-radius:4px;"></div>
+                </div>
+                <div style="display:flex;gap:2rem;margin-bottom:1rem;">
+                    <div>
+                        <span style="display:block;font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:#8e99a4;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Allocated</span>
+                        <span style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.05rem;color:#0d2137;">$@a.Allocated.ToString("N0")</span>
+                    </div>
+                    <div>
+                        <span style="display:block;font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:#8e99a4;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Spent</span>
+                        <span style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.05rem;color:#0d2137;">$@a.Spent.ToString("N0")</span>
+                    </div>
+                </div>
+                <div style="background:#f5f7fa;border:1px solid #e8ecf1;border-radius:8px;padding:0.65rem 0.9rem;">
+                    <span style="display:block;font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:600;color:#8e99a4;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Remaining Balance</span>
+                    <span style="font-family:'Outfit',sans-serif;font-weight:800;font-size:1.2rem;color:#0d2137;">$@a.RemainingBalance.ToString("N0")</span>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div style="text-align:center;padding:3rem;color:#6b7c93;font-family:'Inter',sans-serif;font-size:0.9rem;">No ministry allocations found.</div>
+}
+
+@code {
+    private List<BudgetAllocationReadDto> allocations = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var claim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (claim != null && int.TryParse(claim.Value, out int accountId))
+        {
+            var account = await Db.Accounts.FirstOrDefaultAsync(a => a.AccountId == accountId);
+            var churchId = account?.ChurchId ?? 0;
+            if (churchId > 0)
+            {
+                var budgets = await FinancialApi.GetBudgetsAsync(churchId: churchId);
+                var budgetIds = budgets.Select(b => b.BudgetId).ToHashSet();
+                if (budgetIds.Any())
+                {
+                    var allAllocs = await FinancialApi.GetAllocationsAsync();
+                    allocations = allAllocs.Where(a => a.BudgetId.HasValue && budgetIds.Contains(a.BudgetId.Value)).OrderBy(a => a.Name).ToList();
+                }
+            }
+        }
+    }
+}

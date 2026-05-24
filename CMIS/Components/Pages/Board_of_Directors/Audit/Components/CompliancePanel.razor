@@ -1,0 +1,49 @@
+@using CMIS.Store.Audit
+
+<MudCard Elevation="2" Class="rounded-xl mt-6">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Financial Compliance & Transparency</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <div class="d-flex flex-column align-center pa-4">
+                    <MudProgressCircular Color="Color.Primary" Value="@Metrics.AuditCompletionRate" Size="Size.Large" StrokeWidth="4">
+                        <MudText Typo="Typo.caption" Class="fw-bold">@Metrics.AuditCompletionRate%</MudText>
+                    </MudProgressCircular>
+                    <MudText Typo="Typo.body2" Class="mt-2 text-center">Audit Completion Rate</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <div class="d-flex flex-column align-center pa-4">
+                    <MudIcon Icon="@(Metrics.RecordIntegrityVerified ? Icons.Material.Filled.Verified : Icons.Material.Filled.Warning)" 
+                             Color="@(Metrics.RecordIntegrityVerified ? Color.Success : Color.Error)" Size="Size.Large" />
+                    <MudText Typo="Typo.body2" Class="mt-2 text-center">Record Integrity Verified</MudText>
+                    <MudChip T="string" Color="@(Metrics.RecordIntegrityVerified ? Color.Success : Color.Error)" Size="Size.Small" Class="mt-1">
+                        @(Metrics.RecordIntegrityVerified ? "SECURE" : "UNVERIFIED")
+                    </MudChip>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <div class="d-flex flex-column align-center pa-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Gavel" Color="Color.Warning" Size="Size.Large" />
+                    <MudText Typo="Typo.body2" Class="mt-2 text-center">Transparency Status</MudText>
+                    <MudText Typo="Typo.caption" Class="fw-bold text-yellow-600">@Metrics.TransparencyStatus.ToUpper()</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <div class="d-flex flex-column align-center pa-4">
+                    <MudText Typo="Typo.h4" Class="fw-bold text-blue-500">@Metrics.SummaryFrequencyDays</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-2 text-center">Summary Frequency</MudText>
+                    <MudText Typo="Typo.caption">Days</MudText>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public ComplianceMetrics Metrics { get; set; } = new ComplianceMetrics();
+}

@@ -1,0 +1,91 @@
+.dropdown-selected-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  /* 1. Force the text to stay on a single line */
+  white-space: nowrap !important;
+
+  /* 2. Tell Flexbox this element is allowed to shrink */
+  flex: 1;
+  min-width: 0;
+
+  /* Optional: Ensure text aligns nicely to the left */
+  text-align: left;
+}
+/* CustomDropdown.razor.css */
+
+/* 1. Base trigger overrides styles from membershipstyle.css to accommodate custom layout */
+.custom-dropdown-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 38px;                      /* Match standard height of input/button */
+  box-sizing: border-box;            /* Include border and padding in height calculations */
+  background-image: none !important; /* Hide the hardcoded SVG background arrow from membershipstyle.css */
+  padding-right: 1rem !important;    /* Reset right padding since there is no background image */
+}
+
+/* 2. Selected Text with ellipsis wrapping rules */
+.dropdown-selected-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+/* 3. Individual Dropdown Option list items styling */
+.custom-dropdown-item {
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  color: #334155;
+  /* border-radius: 6px; */
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* 4. Option Hover Highlight style */
+.custom-dropdown-item:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* 5. Option Selected Highlight style */
+.custom-dropdown-item.active {
+  background-color: #f1f5f9;
+  color: #0c3d7d;
+  font-weight: 500;
+}
+
+/* 6. Arrow wrapper rotation */
+.dropdown-arrow-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #6b7c93;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.dropdown-arrow-wrapper.open {
+  transform: rotate(180deg);
+}
+
+.dropdown-arrow-icon {
+  display: block;
+}
+
+/* 7. Left icon styles */
+.dropdown-left-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7c93;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}

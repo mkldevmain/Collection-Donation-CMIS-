@@ -1,0 +1,220 @@
+@page "/head-pastor/collections"
+@page "/head-pastor/collections/{Tab}"
+@layout CMIS.Components.Layout.DashboardLayout
+@rendermode InteractiveServer
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IFinancialService FinancialService
+@using CMIS.Models
+@using CMIS.Data
+@using CMIS.Services
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Collection and Donation Oversight — CMIS Portal</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6 mb-12">
+    <div class="collection-root">
+        @* PAGE HEADER *@
+        <div class="page-heading">
+            <h1 class="page-title">Collection and Donation Oversight</h1>
+            <p class="page-subtitle">Overview of tithes, offerings, recurring donations, and church expenses.</p>
+        </div>
+
+        @* NAVIGATION TABS *@
+        <div class="tab-bar">
+            <a href="/head-pastor/collections/reports" class="tab @(ActiveTab == "reports" ? "active" : "")">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Reports
+            </a>
+            <a href="/head-pastor/collections/tithes" class="tab @(ActiveTab == "tithes" ? "active" : "")">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Tithes &amp; Offerings
+            </a>
+
+            <a href="/head-pastor/collections/recurring" class="tab @(ActiveTab == "recurring" ? "active" : "")">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Recurring Tithes
+            </a>
+        </div>
+
+        @* READ-ONLY ACCESS ALERT *@
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" ContentAlignment="HorizontalAlignment.Left" Class="mb-6 rounded-lg" Style="background-color: #f0f8ff; border-color: #bbdcfb;">
+            <strong>Read-Only Access:</strong> Financial records can be monitored and reviewed but cannot be modified.
+        </MudAlert>
+
+        @* BOD REQUEST NOTIFICATION *@
+        @if (ShowBODRequestAlert)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" ContentAlignment="HorizontalAlignment.Left" Class="mb-6 rounded-lg" Style="background-color: #f0f8ff; border-color: #bbdcfb;" ShowCloseIcon="true" CloseIconClicked="() => ShowBODRequestAlert = false">
+                <strong>BOD requested for collection.</strong> 10% of total collection will be deducted.
+            </MudAlert>
+        }
+
+        @if (ActiveTab == "tithes")
+        {
+            <TithesOfferingsTab IncomeRecords="@IncomeRecords" />
+        }
+
+        else if (ActiveTab == "recurring")
+        {
+            <RecurringTithesTab RecurringTithes="@recurringTithes" />
+        }
+        else if (ActiveTab == "reports")
+        {
+            <ReportsTab 
+                TotalIncome="@TotalIncome"
+                TotalTithes="@TotalTithes"
+                TotalOfferings="@TotalOfferings"
+                TotalExpenses="@TotalExpenses"
+                NetBalance="@NetBalance"
+                ActiveRecurring="@ActiveRecurring"
+                IncomeExpenseSeries="@incomeExpenseSeries"
+                Months="@months"
+                ExpenseDistribution="@expenseDistribution"
+                ExpenseLabels="@expenseLabels"
+                MinistryActivities="@ministryActivities"
+            />
+        }
+    </div>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string? Tab { get; set; }
+
+    private string ActiveTab => string.IsNullOrEmpty(Tab) ? "tithes" : Tab.ToLower();
+
+    // Simulates receiving a notification from the BOD
+    private bool ShowBODRequestAlert = true;
+
+    private IEnumerable<FinancialRecord> IncomeRecords => financialRecords.Where(r => r.Type == "Income");
+    private IEnumerable<FinancialRecord> ExpenseRecords => financialRecords.Where(r => r.Type == "Expense");
+
+    private decimal TotalIncome => IncomeRecords.Sum(r => r.Amount);
+    private decimal TotalTithes => IncomeRecords.Where(r => r.Category == "Tithe").Sum(r => r.Amount);
+    private decimal TotalOfferings => IncomeRecords.Where(r => r.Category == "Offering").Sum(r => r.Amount);
+    private decimal TotalExpenses => ExpenseRecords.Sum(r => r.Amount);
+    private decimal NetBalance => TotalIncome - TotalExpenses;
+    private int ActiveRecurring => recurringTithes.Count(r => r.Status == "Active");
+
+    // Dynamic Data for Charts
+    public List<ChartSeries<double>> incomeExpenseSeries = new List<ChartSeries<double>>();
+    public string[] months = Array.Empty<string>();
+
+    public double[] expenseDistribution = Array.Empty<double>();
+    public string[] expenseLabels = Array.Empty<string>();
+
+    private ChartOptions incomeExpenseOptions = new ChartOptions
+    {
+        ChartPalette = new string[] { "#2ecc71", "#e74c3c" } // Vibrant Green and Red
+    };
+
+    private ChartOptions donutOptions = new ChartOptions
+    {
+        ChartPalette = new string[] { "#0d2137", "#1f4b7a", "#3675ba", "#629bda", "#9fc3ea", "#d0e3f5" } // Monochromatic Blue Scale
+    };
+
+    // Mock Data for Tables
+    private List<FinancialRecord> financialRecords = new();
+    private List<MinistryActivity> ministryActivities = new();
+    private List<RecurringEntry> recurringTithes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        // Income records from service
+        var incomes = await FinancialService.GetIncomesAsync();
+
+        // Expense records from service
+        var dbExpenses = await FinancialService.GetExpensesAsync();
+
+        financialRecords = incomes.Select(i => new FinancialRecord
+        {
+            Id = $"INC-{i.IncomeId}",
+            Ministry = "General",
+            Type = "Income",
+            Category = i.IncomeType,
+            Amount = i.Amount,
+            Date = i.EntryDate,
+            Status = i.Status
+        })
+        .Concat(dbExpenses.Select(e => new FinancialRecord
+        {
+            Id = $"EXP-{e.ExpenseId}",
+            Ministry = e.Category,
+            Type = "Expense",
+            Category = e.Category,
+            Amount = e.Amount,
+            Date = e.DateSpent.ToDateTime(TimeOnly.MinValue),
+            Status = "Recorded"
+        }))
+        .OrderByDescending(r => r.Date)
+        .ToList();
+
+        // Calculate data for Income vs Expense Chart (Current Year: Jan to Dec)
+        int currentYear = DateTime.Today.Year;
+        var currentYearMonths = Enumerable.Range(1, 12)
+            .Select(month => new DateTime(currentYear, month, 1))
+            .ToList();
+
+        months = currentYearMonths.Select(m => m.ToString("MMM")).ToArray();
+
+        var incomeData = currentYearMonths.Select(m => 
+            (double)incomes.Where(i => i.EntryDate.Year == m.Year && i.EntryDate.Month == m.Month).Sum(i => i.Amount)).ToArray();
+            
+        var expenseData = currentYearMonths.Select(m => 
+            (double)dbExpenses.Where(e => e.DateSpent.Year == m.Year && e.DateSpent.Month == m.Month).Sum(e => e.Amount)).ToArray();
+
+        incomeExpenseSeries = new List<ChartSeries<double>>
+        {
+            new ChartSeries<double>() { Name = "Income", Data = incomeData },
+            new ChartSeries<double>() { Name = "Expenses", Data = expenseData }
+        };
+
+        // Calculate data for Expense Distribution Chart
+        if (dbExpenses.Any())
+        {
+            var groupedExpenses = dbExpenses
+                .GroupBy(e => e.Category)
+                .Select(g => new { Category = g.Key, Total = (double)g.Sum(e => e.Amount) })
+                .OrderByDescending(x => x.Total)
+                .ToList();
+
+            expenseLabels = groupedExpenses.Select(g => g.Category).ToArray();
+            expenseDistribution = groupedExpenses.Select(g => g.Total).ToArray();
+        }
+        else
+        {
+            expenseLabels = new[] { "No Expenses" };
+            expenseDistribution = new double[] { 1 };
+        }
+
+        // Ministry activity from expenses grouped by category
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var ministries = await db.Ministries.AsNoTracking().ToListAsync();
+        ministryActivities = ministries.Select(m => new MinistryActivity
+        {
+            Name = m.MinistryName,
+            Donations = 0,
+            Expenses = dbExpenses.Where(e => e.Category == m.MinistryName).Sum(e => e.Amount)
+        }).ToList();
+
+        // Recurring tithes from service
+        var dbRecurring = await FinancialService.GetRecurringTithesAsync();
+        recurringTithes = dbRecurring
+            .Select(r => new RecurringEntry
+            {
+                MemberName = r.Member.FirstName + " " + r.Member.LastName,
+                Frequency = r.Frequency,
+                Amount = r.Amount,
+                NextDueDate = r.NextDueDate.ToDateTime(TimeOnly.MinValue),
+                Status = r.Status
+            })
+            .ToList();
+    }
+
+
+}

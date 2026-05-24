@@ -1,0 +1,84 @@
+/* =============================================
+   FINANCIAL SUMMARY CARDS — Scoped Styles
+   Aligned with Ministry Head theme
+   ============================================= */
+
+.summary-cards-container {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    overflow-x: auto; /* In case the screen is too small */
+    padding-bottom: 0.5rem;
+}
+
+.summary-card-item {
+    flex: 1;
+    min-width: 220px;
+}
+
+.premium-card {
+    border: 1px solid #e8ecf1 !important;
+    border-radius: 12px !important;
+    transition: box-shadow 0.25s, transform 0.2s;
+    background-color: #ffffff;
+}
+
+.premium-card:hover {
+    box-shadow: 0 6px 20px rgba(13, 33, 55, 0.08) !important;
+    transform: translateY(-2px);
+}
+
+.sc-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.15rem 1.25rem !important;
+}
+
+.sc-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Icon Colors matching Ministry Head */
+.sc-icon-primary { background: #eaf2f8; color: #1a5276; }
+.sc-icon-error { background: #fdedec; color: #c0392b; }
+.sc-icon-success { background: #eafaf1; color: #1e8449; }
+.sc-icon-info { background: #eaf2f8; color: #1a5276; }
+.sc-icon-default { background: #f0f4f8; color: #6b7c93; }
+
+.sc-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.sc-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #8e99a4;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+}
+
+.sc-value {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #0d2137;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+}
+
+.sc-value.net-positive { color: #1e8449; }
+.sc-value.net-negative { color: #c0392b; }

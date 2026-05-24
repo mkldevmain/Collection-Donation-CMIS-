@@ -1,0 +1,259 @@
+@page "/district-head/financial/allocation"
+@layout CMIS.Components.Layout.DashboardLayout
+@using CMIS.Data
+@using CMIS.Services.FinancialApi
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@inject IFinancialApiClient FinancialApi
+@inject CustomAuthStateProvider AuthStateProvider
+@rendermode InteractiveServer
+
+<PageTitle>Budget Allocation — District Head</PageTitle>
+
+<div style="margin-bottom:1.5rem;">
+    <h1 style="font-family:'Outfit',sans-serif;font-weight:800;font-size:1.65rem;color:#0d2137;margin:0 0 0.3rem;">Financial Management</h1>
+    <p style="font-family:'Inter',sans-serif;font-size:0.88rem;color:#6b7c93;margin:0;">Manage budgets, track expenses, and monitor financial health.</p>
+</div>
+
+<!-- Tab Bar -->
+<div style="display:flex;gap:0;border-bottom:2px solid #e8ecf1;margin-bottom:1.25rem;">
+    <a href="/district-head/financial/proposals" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Budget Proposals</a>
+    <a href="/district-head/financial/transactions" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Transactions</a>
+    <a href="/district-head/financial/allocation" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#0d2137;text-decoration:none;border-bottom:2px solid #0d2137;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Budget Allocation</a>
+    <a href="/district-head/financial/monitoring" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Monitoring</a>
+    <a href="/district-head/financial/reports" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.7rem 1.1rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;color:#6b7c93;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Reports</a>
+</div>
+
+<!-- Header -->
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+    <div>
+        <h2 style="font-family:'Outfit',sans-serif;font-weight:800;font-size:1.3rem;color:#0d2137;margin:0 0 0.2rem;">District Budgets</h2>
+        <p style="font-family:'Inter',sans-serif;font-size:0.8rem;color:#6b7c93;margin:0;">Budgets and allocations for your district.</p>
+    </div>
+    <button @onclick="OpenBudgetModal" data-enhance-nav="false" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1.2rem;font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:700;color:#fff;background:#0d2137;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">
+        + Allocate Budget
+    </button>
+</div>
+
+<div style="margin-top:1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <h3 style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.05rem;color:#0d2137;margin:0;">Budgets</h3>
+        <span style="font-family:'Inter',sans-serif;font-size:0.75rem;color:#8e99a4;">@districtBudgets.Count budget(s)</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e8ecf1;border-radius:12px;padding:1.2rem;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:0.84rem;table-layout:fixed;">
+            <colgroup><col style="width:11%"/><col style="width:29%"/><col style="width:14%"/><col style="width:14%"/><col style="width:14%"/><col style="width:18%"/></colgroup>
+            <thead>
+                <tr>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Date</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Name</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Fiscal Year</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Total</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Allocated</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Remaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in pagedBudgets)
+                {
+                    var bAllocated = districtAllocs.Where(a => a.BudgetId == b.BudgetId).Sum(a => a.Allocated);
+                    var bRemaining = b.TotalAmount - bAllocated;
+                    var bRemColor = bRemaining < 0 ? "#c0392b" : "#1e8449";
+                    <tr style="border-bottom:1px solid #f0f3f6;">
+                        <td style="padding:0.7rem 0.8rem;color:#8e99a4;font-size:0.8rem;">@b.CreatedAt.ToString("M/d/yyyy")</td>
+                        <td style="padding:0.7rem 0.8rem;font-weight:600;color:#0d2137;">@b.Name</td>
+                        <td style="padding:0.7rem 0.8rem;color:#6b7c93;">@b.FiscalYear</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#0d2137;">$@b.TotalAmount.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#1a5276;">$@bAllocated.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;font-weight:700;color:@bRemColor;">$@bRemaining.ToString("N0")</td>
+                    </tr>
+                }
+                @if (!districtBudgets.Any())
+                {
+                    <tr><td colspan="6" style="padding:2.5rem 1rem;text-align:center;color:#8e99a4;font-style:italic;">No budgets found for your district.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (budgTotalPages > 1)
+{
+    <div style="display:flex;justify-content:center;padding:0.75rem 0 0.25rem;">
+        <MudPagination Count="@budgTotalPages" @bind-Selected="budgPage" Color="Color.Primary" Size="Size.Small" />
+    </div>
+}
+
+<div style="margin-top:1.25rem;margin-bottom:1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <h3 style="font-family:'Outfit',sans-serif;font-weight:700;font-size:1.05rem;color:#0d2137;margin:0;">Budget Allocations</h3>
+        <span style="font-family:'Inter',sans-serif;font-size:0.75rem;color:#8e99a4;">@activeAllocs.Count() allocation(s)</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e8ecf1;border-radius:12px;padding:1.2rem;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:0.84rem;table-layout:fixed;">
+            <colgroup><col style="width:36%"/><col style="width:22%"/><col style="width:22%"/><col style="width:20%"/></colgroup>
+            <thead>
+                <tr>
+                    <th style="padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Name</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Allocated</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Spent</th>
+                    <th style="padding:0.6rem 0.8rem;text-align:right;font-weight:600;font-size:0.72rem;color:#6b7c93;border-bottom:1px solid #e8ecf1;">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in pagedAllocs)
+                {
+                    var balance = a.Allocated - a.Spent;
+                    var balColor = balance < 0 ? "#c0392b" : "#1e8449";
+                    <tr style="border-bottom:1px solid #f0f3f6;">
+                        <td style="padding:0.7rem 0.8rem;font-weight:600;color:#0d2137;">@a.Name</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#0d2137;">$@a.Allocated.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;color:#c0392b;">$@a.Spent.ToString("N0")</td>
+                        <td style="padding:0.7rem 0.8rem;text-align:right;font-weight:700;color:@balColor;">$@balance.ToString("N0")</td>
+                    </tr>
+                }
+                @if (!districtAllocs.Any())
+                {
+                    <tr><td colspan="4" style="padding:2.5rem 1rem;text-align:center;color:#8e99a4;font-style:italic;">No budget allocations found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (allocTotalPages > 1)
+{
+    <div style="display:flex;justify-content:center;padding:0.75rem 0 0.25rem;">
+        <MudPagination Count="@allocTotalPages" @bind-Selected="allocPage" Color="Color.Primary" Size="Size.Small" />
+    </div>
+}
+
+@if (showBudgetModal)
+{
+    <div class="modal-overlay" @onclick="CloseBudgetModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <h2 class="modal-title">Allocate Budget</h2>
+            <div class="modal-field">
+                <label class="modal-label">Budget</label>
+                <select class="modal-input" @bind="budgetModalBudgetId">
+                    <option value="0">— Select Budget —</option>
+                    @foreach (var b in activeBudgets)
+                    {
+                        <option value="@b.BudgetId">@b.Name (@b.FiscalYear)</option>
+                    }
+                </select>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Allocation Name</label>
+                <input type="text" class="modal-input" placeholder="e.g. District Ministry" @bind="budgetModalName" />
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Allocated Amount ($)</label>
+                <input type="number" class="modal-input" step="0.01" min="0" placeholder="0.00" @bind="budgetModalAmount" />
+            </div>
+            @if (!string.IsNullOrEmpty(budgetModalError))
+            {
+                <p class="modal-error">@budgetModalError</p>
+            }
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" @onclick="CloseBudgetModal">Cancel</button>
+                <button class="modal-btn-save" @onclick="SaveAllocateBudget" disabled="@isSavingBudget">
+                    @(isSavingBudget ? "Saving..." : "Allocate Budget")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<BudgetReadDto> districtBudgets = new();
+    private List<BudgetAllocationReadDto> districtAllocs = new();
+    private int currentDistrictId = 0;
+
+    private IEnumerable<BudgetReadDto> activeBudgets => districtBudgets.Where(b => b.EndYear >= DateTime.Now.Year);
+
+    private int budgPage = 1;
+    private const int BudgPageSize = 10;
+    private int budgTotalPages => Math.Max(1, (int)Math.Ceiling((double)activeBudgets.Count() / BudgPageSize));
+    private List<BudgetReadDto> pagedBudgets => activeBudgets.Skip((budgPage - 1) * BudgPageSize).Take(BudgPageSize).ToList();
+
+    private int allocPage = 1;
+    private const int AllocPageSize = 10;
+    private IEnumerable<BudgetAllocationReadDto> activeAllocs => districtAllocs.Where(a =>
+        a.BudgetId.HasValue && districtBudgets.Any(b => b.BudgetId == a.BudgetId.Value && b.EndYear >= DateTime.Now.Year));
+    private int allocTotalPages => Math.Max(1, (int)Math.Ceiling((double)activeAllocs.Count() / AllocPageSize));
+    private List<BudgetAllocationReadDto> pagedAllocs => activeAllocs.Skip((allocPage - 1) * AllocPageSize).Take(AllocPageSize).ToList();
+
+    private bool showBudgetModal = false;
+    private bool isSavingBudget = false;
+    private int budgetModalBudgetId = 0;
+    private string budgetModalName = "";
+    private decimal budgetModalAmount = 0;
+    private string budgetModalError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var accountIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (accountIdClaim != null && int.TryParse(accountIdClaim.Value, out int accountId))
+        {
+            var account = await Db.Accounts.Include(a => a.Church).FirstOrDefaultAsync(a => a.AccountId == accountId);
+            currentDistrictId = account?.DistrictId ?? account?.Church?.DistrictId ?? 0;
+        }
+        await ReloadData();
+    }
+
+    private void OpenBudgetModal()
+    {
+        budgetModalBudgetId = 0; budgetModalName = ""; budgetModalAmount = 0; budgetModalError = "";
+        showBudgetModal = true;
+    }
+    private void CloseBudgetModal() { showBudgetModal = false; budgetModalError = ""; }
+
+    private async Task SaveAllocateBudget()
+    {
+        budgetModalError = "";
+        if (budgetModalBudgetId == 0) { budgetModalError = "Please select a budget."; return; }
+        if (string.IsNullOrWhiteSpace(budgetModalName)) { budgetModalError = "Allocation name is required."; return; }
+        if (budgetModalAmount <= 0) { budgetModalError = "Amount must be greater than zero."; return; }
+
+        isSavingBudget = true;
+        try
+        {
+            await FinancialApi.CreateAllocationAsync(new BudgetAllocationWriteDto
+            {
+                Name = budgetModalName.Trim(),
+                Allocated = budgetModalAmount,
+                Spent = 0,
+                BudgetId = budgetModalBudgetId
+            });
+            await ReloadData();
+            showBudgetModal = false;
+        }
+        catch (Exception ex)
+        {
+            budgetModalError = $"Save failed: {ex.Message}";
+        }
+        isSavingBudget = false;
+    }
+
+    private async Task ReloadData()
+    {
+        var allBudgets = await FinancialApi.GetBudgetsAsync(districtId: currentDistrictId);
+        districtBudgets = allBudgets.OrderByDescending(b => b.TotalAmount).ToList();
+
+        var budgetIds = districtBudgets.Select(b => b.BudgetId).ToHashSet();
+        if (budgetIds.Any())
+        {
+            var allAllocs = await FinancialApi.GetAllocationsAsync();
+            districtAllocs = allAllocs
+                .Where(a => a.BudgetId.HasValue && budgetIds.Contains(a.BudgetId.Value))
+                .OrderBy(a => a.Name)
+                .ToList();
+        }
+        else
+        {
+            districtAllocs = new();
+        }
+    }
+}

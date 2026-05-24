@@ -1,0 +1,118 @@
+@using CMIS.Components.Pages.Ministry_Head.Collection_Donation
+
+<div class="report-grid">
+    <div class="report-card full-width">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+            <h3 class="report-title" style="margin:0;">Donations Overview</h3>
+            <div class="segmented-control" style="margin-bottom:0; padding:0.2rem;">
+                <button class="segment-btn @(chartView == "monthly" ? "active" : "")" style="min-width:90px; padding:0.4rem 1rem;" @onclick='() => chartView = "monthly"'>Monthly</button>
+                <button class="segment-btn @(chartView == "weekly" ? "active" : "")" style="min-width:90px; padding:0.4rem 1rem;" @onclick='() => chartView = "weekly"'>Weekly</button>
+            </div>
+        </div>
+        <div class="chart-placeholder">
+            <div class="chart-bars">
+                @{
+                    var chartData = chartView == "monthly" ? MonthlyData : WeeklyData;
+                }
+                @foreach (var m in chartData)
+                {
+                    <div class="chart-bar-group">
+                        <div class="chart-bar" style="height: @(m.Value)%"></div>
+                        <span class="chart-label">@m.Key</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="report-card full-width">
+        <h3 class="report-title">Recurring Tithe Completion</h3>
+        <div class="completion-stats">
+            <div class="comp-stat">
+                <span class="cs-value">@Schedules.Count(r => r.Status == "Active" && r.NextDue > DateTime.Today.AddDays(7))</span>
+                <span class="cs-label">Completed</span>
+            </div>
+            <div class="comp-stat">
+                <span class="cs-value">@Schedules.Count(r => r.Status == "Active" && r.NextDue >= DateTime.Today && r.NextDue <= DateTime.Today.AddDays(7))</span>
+                <span class="cs-label">Upcoming</span>
+            </div>
+            <div class="comp-stat">
+                <span class="cs-value">@Schedules.Count(r => r.Status == "Active" && r.NextDue < DateTime.Today)</span>
+                <span class="cs-label">Missed</span>
+            </div>
+        </div>
+
+        <div class="completion-details" style="margin-top: 2rem; border-top: 1px solid #e8ecf1; padding-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="font-family:'Outfit',sans-serif; font-size: 0.9rem; color: #0d2137; margin: 0;">Recent Activity &amp; Completion Details</h4>
+                <div class="segmented-control" style="margin-bottom: 0; padding: 0.2rem;">
+                    <button class="segment-btn @(subTab == "completed" ? "active" : "")" style="min-width: 100px; padding: 0.4rem 1rem;" @onclick='() => subTab = "completed"'>Completed</button>
+                    <button class="segment-btn @(subTab == "upcoming" ? "active" : "")" style="min-width: 100px; padding: 0.4rem 1rem;" @onclick='() => subTab = "upcoming"'>Upcoming</button>
+                    <button class="segment-btn @(subTab == "missed" ? "active" : "")" style="min-width: 100px; padding: 0.4rem 1rem;" @onclick='() => subTab = "missed"'>Missed</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>MEMBER</th>
+                            <th>FREQUENCY</th>
+                            <th>EXPECTED</th>
+                            <th>NEXT DUE</th>
+                            <th>CURRENT STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var activeRecurring = Schedules.Where(rt => rt.Status == "Active").Select(r => {
+                                var status = "Upcoming";
+                                var badgeClass = "status-upcoming";
+                                if (r.NextDue < DateTime.Today) { status = "Missed"; badgeClass = "status-missed"; }
+                                else if (r.NextDue > DateTime.Today.AddDays(7)) { status = "Completed"; badgeClass = "status-completed"; }
+                                return new { Record = r, StatusStr = status, BadgeClass = badgeClass };
+                            });
+                            var filteredDetails = activeRecurring.Where(x => x.StatusStr.ToLower() == subTab).OrderByDescending(x => x.Record.NextDue).ToList();
+                        }
+                        @if (filteredDetails.Any())
+                        {
+                            @foreach (var item in filteredDetails)
+                            {
+                                <tr>
+                                    <td class="col-donor"><span class="donor-name">@item.Record.MemberName</span></td>
+                                    <td>@item.Record.Frequency</td>
+                                    <td class="col-amount">₱@item.Record.ExpectedAmount.ToString("N0")</td>
+                                    <td>@item.Record.NextDue.ToString("MMM dd, yyyy")</td>
+                                    <td><span class="status-badge @item.BadgeClass"><span class="status-dot"></span>@item.StatusStr</span></td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="5" class="empty-state">No @subTab recurring schedules.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Dictionary<string, int> MonthlyData { get; set; } = new Dictionary<string, int>();
+
+    [Parameter]
+    public Dictionary<string, int> WeeklyData { get; set; } = new Dictionary<string, int>();
+
+    [Parameter]
+    public decimal TotalIncome { get; set; }
+
+    [Parameter]
+    public decimal NetBalance { get; set; }
+
+    [Parameter]
+    public List<RecurringEntry> Schedules { get; set; } = new List<RecurringEntry>();
+
+    private string subTab = "completed";
+    private string chartView = "monthly";
+}

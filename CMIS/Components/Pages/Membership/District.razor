@@ -1,0 +1,190 @@
+@page "/membership/districts"
+@page "/{RoleSlug}/membership/districts"
+@layout AdminLayout
+@using CMIS.Data
+@using CMIS.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@inject NavigationManager Nav
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthState
+@rendermode InteractiveServer
+
+<PageTitle>Districts</PageTitle>
+
+<div style="display: flex; flex-direction: column; flex: 1; box-sizing: border-box; padding: 2rem 2rem 0rem 2rem; font-family: 'Inter', sans-serif;">
+    <CMIS.Components.Shared.PageHeader Title="Districts" />
+
+<div style="display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background-color: white; border-radius: 20px 20px 0px 0px; flex: 1;">
+    <div style="display: flex; gap: 0.7rem; ">
+        <div class="mmbr-search-container">
+            <i class="fi fi-rr-search"></i>
+            <input type="text" placeholder="Search for District or Region" @bind="searchQuery" @bind:event="oninput" class="mmbr-searchinput"/>
+        </div>
+
+        <div style="display: flex; gap: 0.7rem;">
+            <div style="width: 220px;">
+                <CMIS.Components.Shared.CustomDropdown 
+                    TItem="string"
+                    Items="sortOptions"
+                    @bind-SelectedValue="selectedSortOption"
+                    DisplayProperty="@(s => s)"
+                    DisplayPrefix="Sort by: ">
+                    <LeftIcon>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7c93;">
+                            <line x1="18" y1="21" x2="18" y2="3"></line>
+                            <polyline points="17 4 15 6 19 6"></polyline>
+                            <line x1="6" y1="21" x2="6" y2="3"></line>
+                            <polyline points="5 20 3 18 7 18"></polyline>
+                        </svg>
+                    </LeftIcon>
+                </CMIS.Components.Shared.CustomDropdown>
+            </div>
+            @if (isBoardOfDirectors)
+            {
+                <button type="button" @onclick="OpenModal" class="mmbr-createbutton" style="gap: 2px; padding-left: 0.6rem;">
+                    <i class="fi fi-rr-plus-small" style="display: flex; align-self: center; font-size: 1.3rem;"></i> Create District
+                </button>
+            }
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+        @foreach (var dist in FilteredDistricts)
+        {
+            <div style="background: white; border: 1px solid #e8ecf1; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;" @onclick='() => Nav.NavigateTo($"/districts/details/{dist.DistrictId}")'>
+                <div style="height: 160px; background: #cbd5e1; position: relative;">
+                    <img src="https://images.pexels.com/photos/31893708/pexels-photo-31893708.jpeg" style="width: 100%; height: 100%; object-fit: cover;" alt="Church" />
+                </div>
+                <div style="padding: 1.2rem; display: flex; flex-direction: column; flex-grow: 1;">
+                    <h3 style="margin: 0; color: #0d2137; font-family: 'Inter', sans-serif; font-size: 1.2rem;">@dist.DistrictName</h3>
+                    <p style="margin: 0; color: #94a3b8; font-weight: 300; font-family: 'Inter', sans-serif; font-size: 0.9rem;">@dist.Address</p>
+                    <p style="margin: 0 0 1rem 0; color: #94a3b8; font-weight: 300; font-family: 'Inter', sans-serif; font-size: 0.9rem;">
+                        @(dist.Churches?.Count ?? 0) @(dist.Churches?.Count == 1 ? "Church" : "Churches")
+                    </p>
+                    <button type="button" class="cardbutton" @onclick='() => Nav.NavigateTo($"/districts/details/{dist.DistrictId}")' style="cursor:pointer">
+                        View Details
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+</div>
+
+@if (isModalOpen)
+{
+    <CMIS.Components.Dialogs.DistrictCreationDialog OnClose="CloseModal" OnSuccess="HandleSuccess" />
+}
+
+@code {
+    [Parameter] public string? RoleSlug { get; set; }
+    private bool isModalOpen = false;
+    private string searchQuery = "";
+    private bool isBoardOfDirectors = false;
+    private int? userDistrictId = null;
+    private bool isDistrictHead = false;
+
+    private string selectedSortOption = "Name (A-Z)";
+    private List<string> sortOptions = new() { "Name (A-Z)", "Name (Z-A)", "Date Created" };
+
+    // FIX: Use the full namespace here
+    private List<CMIS.Models.District> districts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // 1. THE NATIVE SECURITY CHECK
+        // If they aren't logged in, or don't have one of these 3 roles, kick them out.
+        if (!user.Identity?.IsAuthenticated ?? true || 
+            (!user.IsInRole("Board of Directors") && 
+            !user.IsInRole("Leadership Council") && 
+            !user.IsInRole("District Head")))
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        // 2. CONTINUE LOADING PAGE FOR AUTHORIZED USERS
+        isBoardOfDirectors = user.IsInRole("Board of Directors");
+        isDistrictHead = user.IsInRole("District Head");
+
+        if (isDistrictHead)
+        {
+            var userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                        ?? user.Identity?.Name;
+
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                var account = await Db.Accounts
+                    .Include(a => a.Profile)
+                        .ThenInclude(p => p.LeadershipAssignments)
+                    .FirstOrDefaultAsync(a => a.Email == userEmail || a.Username == userEmail);
+
+                userDistrictId = account?.Profile?.LeadershipAssignments
+                    .FirstOrDefault(la => la.Status == "Active" && la.DistrictId.HasValue)?
+                    .DistrictId;
+            }
+        }
+
+        await LoadDistricts();
+    }
+
+    private async Task LoadDistricts()
+    {
+        var query = Db.Districts.Include(d => d.Churches).AsQueryable();
+
+        // Scope data for District Head
+        if (isDistrictHead && userDistrictId.HasValue)
+        {
+            query = query.Where(d => d.DistrictId == userDistrictId.Value);
+        }
+        else if (isDistrictHead && !userDistrictId.HasValue)
+        {
+            // If District Head has no active assignment, they see nothing (security fallback)
+            districts = new();
+            return;
+        }
+
+        districts = await query.ToListAsync();
+    }
+
+    // FIX: Use the full namespace here too
+    private IEnumerable<CMIS.Models.District> FilteredDistricts
+    {
+        get
+        {
+            var query = string.IsNullOrWhiteSpace(searchQuery) 
+                ? districts 
+                : districts.Where(d => d.DistrictName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) || 
+                                     (d.Address != null && d.Address.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
+
+            if (selectedSortOption == "Name (A-Z)")
+            {
+                return query.OrderBy(d => d.DistrictName);
+            }
+            else if (selectedSortOption == "Name (Z-A)")
+            {
+                return query.OrderByDescending(d => d.DistrictName);
+            }
+            else if (selectedSortOption == "Date Created")
+            {
+                return query.OrderByDescending(d => d.DistrictId); // Newest first logically represents date created in auto-incrementing DBs
+            }
+
+            return query;
+        }
+    }
+
+    private void OpenModal() => isModalOpen = true;
+    private void CloseModal() => isModalOpen = false;
+
+    private async Task HandleSuccess()
+    {
+        isModalOpen = false;
+        await LoadDistricts(); 
+        StateHasChanged(); 
+    }
+}

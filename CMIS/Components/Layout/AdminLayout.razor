@@ -1,0 +1,46 @@
+@inherits LayoutComponentBase
+@using CMIS.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="admin-layout">
+    <!-- Sidebar Component -->
+    <Sidebar IsOpen="sidebarOpen" />
+
+    <!-- Sidebar overlay for mobile devices -->
+    <div class="sidebar-overlay @(sidebarOpen ? "visible" : "")" @onclick="() => sidebarOpen = false"></div>
+
+    <!-- Main Content Area -->
+    <div class="admin-main" style="padding: 0px !important;">
+        <!-- Main Page Body -->
+        <main class="page-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private bool sidebarOpen = false;
+    private string roleName = "Administrator";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+                if (user.Identity?.IsAuthenticated == true)
+                {
+                    roleName = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Administrator";
+                    StateHasChanged();
+                }
+            }
+            catch 
+            { 
+                // Handle pre-rendering state or storage missing exceptions
+            }
+        }
+    }
+}

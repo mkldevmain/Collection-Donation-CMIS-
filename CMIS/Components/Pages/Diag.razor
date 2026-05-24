@@ -1,0 +1,51 @@
+@page "/diag"
+@using CMIS.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@layout CMIS.Components.Layout.DashboardLayout
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Database Diagnostic</MudText>
+    
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">Financial Income Records</MudText>
+                <MudText Typo="Typo.body1">Count: @incomeCount</MudText>
+                <MudText Typo="Typo.body1">Total Amount: @totalIncome.ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">Financial Expense Records</MudText>
+                <MudText Typo="Typo.body1">Count: @expenseCount</MudText>
+                <MudText Typo="Typo.body1">Total Amount: @totalExpense.ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Refresh" Class="mt-4">Refresh Data</MudButton>
+</MudContainer>
+
+@code {
+    private int incomeCount;
+    private decimal totalIncome;
+    private int expenseCount;
+    private decimal totalExpense;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        incomeCount = await Db.FinancialIncomes.CountAsync();
+        totalIncome = await Db.FinancialIncomes.SumAsync(i => (decimal?)i.Amount) ?? 0;
+        
+        expenseCount = await Db.FinancialExpenses.CountAsync();
+        totalExpense = await Db.FinancialExpenses.SumAsync(e => (decimal?)e.Amount) ?? 0;
+        
+        StateHasChanged();
+    }
+}

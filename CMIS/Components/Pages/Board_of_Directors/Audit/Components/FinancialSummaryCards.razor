@@ -1,0 +1,61 @@
+@using CMIS.Store.Audit
+
+<div class="summary-cards-container">
+    @foreach (var card in GetCards())
+    {
+        var iconClass = GetIconClass(card.Color);
+        var isNetBalance = card.Title.Contains("Net");
+        var valueClass = isNetBalance ? (card.Value.Contains("-") ? "sc-value net-negative" : "sc-value net-positive") : "sc-value";
+
+        <div class="summary-card-item">
+            <MudCard Elevation="0" Class="premium-card">
+                <MudCardContent Class="sc-content">
+                    <div class="sc-icon @iconClass">
+                        <MudIcon Icon="@card.Icon" Size="Size.Small" Style="color: inherit;" />
+                    </div>
+                    <div class="sc-info">
+                        <p class="sc-label">@card.Title</p>
+                        <p class="@valueClass">@card.Value</p>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<FinancialSummary> Summaries { get; set; } = new List<FinancialSummary>();
+    [Parameter] public ComplianceMetrics Metrics { get; set; } = new ComplianceMetrics();
+    [Parameter] public int AuditLogCount { get; set; }
+
+    private IEnumerable<StatCard> GetCards()
+    {
+        var latest = Summaries.OrderByDescending(s => s.FinalizationDate).FirstOrDefault() ?? new FinancialSummary();
+        var totalIncome = latest.TotalIncome;
+        var totalExpenses = latest.TotalExpenses;
+        var netBalance = latest.NetBalance;
+
+        return new List<StatCard>
+        {
+            new StatCard("Total Church Income", $"₱{totalIncome:N0}", Icons.Material.Filled.AccountBalanceWallet, Color.Primary, 0),
+            new StatCard("Total Church Expenses", $"₱{totalExpenses:N0}", Icons.Material.Filled.Payments, Color.Error, 0),
+            new StatCard("Net Financial Balance", $"₱{netBalance:N0}", Icons.Material.Filled.AccountBalance, Color.Success, 0),
+            new StatCard("Compliance Status", $"{Metrics.AuditCompletionRate}%", Icons.Material.Filled.CheckCircle, Color.Success, 0),
+            new StatCard("Audit Log Entries", AuditLogCount.ToString(), Icons.Material.Filled.History, Color.Default, 0)
+        };
+    }
+
+    private string GetIconClass(Color color)
+    {
+        return color switch
+        {
+            Color.Primary => "sc-icon-primary",
+            Color.Error => "sc-icon-error",
+            Color.Success => "sc-icon-success",
+            Color.Info => "sc-icon-info",
+            _ => "sc-icon-default"
+        };
+    }
+
+    private record StatCard(string Title, string Value, string Icon, Color Color, double Trend);
+}

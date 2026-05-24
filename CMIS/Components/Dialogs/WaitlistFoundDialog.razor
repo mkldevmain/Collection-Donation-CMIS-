@@ -1,0 +1,77 @@
+@using CMIS.Models
+
+<!-- ===== FOUND MODAL — Backdrop ===== -->
+<div class="wl-modal-backdrop @(IsAnimating ? "active" : "")" @onclick="HandleClose">
+    <div class="wl-modal-card @(IsAnimating ? "active" : "")" @onclick:stopPropagation>
+        <div class="wl-modal-body" id="modal-found">
+
+            <!-- Icon -->
+            <div class="wl-modal-icon-circle">
+                <svg class="wl-modal-icon" width="48" height="48" viewBox="0 0 64 64" fill="none">
+                    <circle cx="26" cy="26" r="10" stroke="#0d2137" stroke-width="3.5" fill="none"/>
+                    <line x1="33.5" y1="33.5" x2="46" y2="46" stroke="#0d2137" stroke-width="3.5" stroke-linecap="round"/>
+                    <circle cx="22" cy="23" r="4" fill="#0d2137"/>
+                    <path d="M16 31c0-3.3 2.7-6 6-6h1c3.3 0 6 2.7 6 6" stroke="#0d2137" stroke-width="3" stroke-linecap="round" fill="none"/>
+                </svg>
+            </div>
+
+            <h2 class="wl-modal-heading">We found your record.<br />Is this you?</h2>
+
+            <!-- Profile Details Card -->
+            <div class="wl-profile-card" id="profile-details">
+                <div class="wl-profile-row">
+                    <span class="wl-profile-label">First Name:</span>
+                    <span class="wl-profile-value">@Profile.FirstName</span>
+                </div>
+                <div class="wl-profile-row">
+                    <span class="wl-profile-label">Middle Name:</span>
+                    <span class="wl-profile-value">@(Profile.MiddleName ?? "—")</span>
+                </div>
+                <div class="wl-profile-row">
+                    <span class="wl-profile-label">Last Name:</span>
+                    <span class="wl-profile-value">@Profile.LastName</span>
+                </div>
+                <div class="wl-profile-row">
+                    <span class="wl-profile-label">Date of Birth:</span>
+                    <span class="wl-profile-value">@(Profile.BirthDate?.ToString("MM/dd/yyyy") ?? "—")</span>
+                </div>
+                <div class="wl-profile-row">
+                    <span class="wl-profile-label">Phone Number:</span>
+                    <span class="wl-profile-value">@(Profile.ContactNumber ?? "—")</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="wl-modal-actions">
+                <button class="wl-btn-secondary" id="btn-not-me" @onclick="HandleClose">
+                    NO, THIS IS NOT ME
+                </button>
+                <button class="wl-btn-primary" id="btn-continue" @onclick="HandleContinue">
+                    CONTINUE
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7H13M13 7L8 2M13 7L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>The matched Profile to display in the confirmation card.</summary>
+    [Parameter, EditorRequired]
+    public Profile Profile { get; set; } = default!;
+
+    /// <summary>Controls the fade / scale-in animation state.</summary>
+    [Parameter]
+    public bool IsAnimating { get; set; }
+
+    /// <summary>Fired when the user clicks "NO, THIS IS NOT ME" or the backdrop.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Fired when the user clicks "CONTINUE" to proceed with this profile.</summary>
+    [Parameter]
+    public EventCallback OnContinue { get; set; }
+
+    private async Task HandleClose() => await OnClose.InvokeAsync();
+    private async Task HandleContinue() => await OnContinue.InvokeAsync();
+}

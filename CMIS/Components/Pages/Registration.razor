@@ -1,0 +1,216 @@
+@page "/register"
+@layout CMIS.Components.Layout.LoginLayout
+@using CMIS.Data
+@using CMIS.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Set Up Your Account — Jesus Our Banner Ministry</PageTitle>
+<HeadContent>
+    <meta name="description" content="Look up your waitlist record and set up your CMIS account for Jesus Our Banner Ministry." />
+</HeadContent>
+
+
+
+<!-- ===== TOP NAVBAR ===== -->
+<CMIS.Components.Layout.PublicHeader />
+
+<!-- ===== MAIN SPLIT CONTENT ===== -->
+<section class="reg-split">
+    <!-- Left: Hero Image -->
+    <div class="reg-hero">
+        <img src="https://images.pexels.com/photos/14303353/pexels-photo-14303353.jpeg" alt="Church worship service" class="hero-img" />
+        <div class="hero-overlay"></div>
+    </div>
+
+    <!-- Right: Lookup Form -->
+    <div class="reg-form-panel">
+        <div class="form-container">
+            <h1 class="form-heading" id="reg-heading">Set up your account.</h1>
+            <p class="form-subheading">Please enter your details.</p>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="reg-error" id="reg-error">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    @errorMessage
+                </div>
+            }
+
+            <EditForm Model="lookupModel" OnSubmit="HandleLookup">
+                <div class="fields-row">
+                    <div class="field-group">
+                        <label for="reg-firstname" class="field-label">First Name</label>
+                        <InputText id="reg-firstname" class="pblc-searchinput" @bind-Value="lookupModel.FirstName" />
+                    </div>
+                    <div class="field-group field-group--small">
+                        <label for="reg-middlename" class="field-label">Middle Name</label>
+                        <InputText id="reg-middlename" class="pblc-searchinput" @bind-Value="lookupModel.MiddleName" />
+                    </div>
+                </div>
+
+                <div class="fields-row">
+                    <div class="field-group">
+                        <label for="reg-lastname" class="field-label">Last Name</label>
+                        <InputText id="reg-lastname" class="pblc-searchinput" @bind-Value="lookupModel.LastName" />
+                    </div>
+                    <div class="field-group field-group--small">
+                        <label for="reg-phone" class="field-label">Phone Number</label>
+                        <div class="phone-wrapper">
+                            <span class="phone-prefix">(+63)</span>
+                            <InputText id="reg-phone" class="pblc-searchinput phone-input" @bind-Value="lookupModel.PhoneNumber" />
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="pblc-mainbutton" id="btn-lookup" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span>LOOKING UP...</span>
+                    }
+                    else
+                    {
+                        <span>LOOKUP IN WAITLIST</span>
+                        <i class="fi fi-rr-arrow-small-right" style="padding-top:2px"></i>
+                    }
+                </button>
+            </EditForm>
+
+            <p class="login-text">
+                Already have an account?
+                <a href="/login" class="login-link" id="login-link">Sign in.</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ===== MODAL DIALOGS ===== -->
+@if (showFoundModal && foundProfile is not null)
+{
+    <CMIS.Components.Dialogs.WaitlistFoundDialog
+        Profile="foundProfile"
+        IsAnimating="modalAnimating"
+        OnClose="CloseModals"
+        OnContinue="ContinueWithProfile" />
+}
+
+@if (showNotFoundModal)
+{
+    <CMIS.Components.Dialogs.WaitlistNotFoundDialog
+        IsAnimating="modalAnimating"
+        OnClose="CloseModals"
+        OnInitialAccount="GoToInitialAccount" />
+}
+
+@code {
+    // ---- State ----
+    private LookupModel lookupModel = new();
+    private Profile? foundProfile;
+
+    private bool showFoundModal = false;
+    private bool showNotFoundModal = false;
+    private bool modalAnimating = false;
+
+    private bool menuOpen = false;
+    private int? activeDropdown = null;
+    private string? errorMessage;
+    private bool isLoading = false;
+
+    // ---- Navbar helpers ----
+    private void ToggleMenu() => menuOpen = !menuOpen;
+
+    private void ToggleDropdown(int id)
+    {
+        activeDropdown = activeDropdown == id ? null : id;
+    }
+
+    // ---- Lookup Logic ----
+    private async Task HandleLookup()
+    {
+        errorMessage = null;
+
+        // Basic validation
+        if (string.IsNullOrWhiteSpace(lookupModel.FirstName) ||
+            string.IsNullOrWhiteSpace(lookupModel.LastName) ||
+            string.IsNullOrWhiteSpace(lookupModel.PhoneNumber))
+        {
+            errorMessage = "Please fill in all required fields (First Name, Last Name, and Phone Number).";
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            // Normalize the phone number for comparison
+            var phoneNumber = lookupModel.PhoneNumber.Trim();
+
+            // Query the Profiles table — include Account to check registration status
+            var profile = await DbContext.Profiles
+                .Include(p => p.Account)
+                .FirstOrDefaultAsync(p =>
+                    p.FirstName == lookupModel.FirstName.Trim() &&
+                    p.MiddleName == (string.IsNullOrWhiteSpace(lookupModel.MiddleName) ? null : lookupModel.MiddleName.Trim()) &&
+                    p.LastName == lookupModel.LastName.Trim() &&
+                    p.ContactNumber == phoneNumber &&
+                    p.Account == null // CRITICAL: only match profiles without an Account
+                );
+
+            if (profile is not null)
+            {
+                foundProfile = profile;
+                showFoundModal = true;
+            }
+            else
+            {
+                showNotFoundModal = true;
+            }
+
+            // Trigger animation after render
+            await Task.Delay(20);
+            modalAnimating = true;
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            errorMessage = "An error occurred during lookup. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // ---- Modal Navigation ----
+    private void ContinueWithProfile()
+    {
+        if (foundProfile is not null)
+        {
+            Navigation.NavigateTo($"/register/finalize/{foundProfile.ProfileId}");
+        }
+    }
+
+    private void GoToInitialAccount()
+    {
+        Navigation.NavigateTo("/register/new");
+    }
+
+    private void CloseModals()
+    {
+        modalAnimating = false;
+        showFoundModal = false;
+        showNotFoundModal = false;
+        foundProfile = null;
+    }
+
+    // ---- Form Model ----
+    public class LookupModel
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string MiddleName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+    }
+}

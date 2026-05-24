@@ -1,0 +1,265 @@
+@using CMIS.Data
+@using CMIS.Models
+@using CMIS.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceScopeFactory ScopeFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Routing
+
+<aside class="sidebar @(IsOpen ? "open" : "")">
+    <div class="sidebar-brand">
+        <!-- Assuming a placeholder logo if actual doesn't exist, can be adjusted later -->
+        <img src="images/jobmLogo.png" alt="Logo">
+        <div class="brand-text">
+            <span>JESUS OUR BANNER</span>
+            <span class="ministry">MINISTRY</span>
+        </div>
+    </div>
+    
+    <div class="context-switcher">
+        <CMIS.Components.Shared.CustomDropdown 
+            TItem="LeadershipAssignment"
+            Items="userRoles"
+            SelectedValue="userRoles.FirstOrDefault(r => r.AssignmentId == activeAssignmentId)"
+            SelectedValueChanged="HandleRoleChange"
+            TriggerClass="context-select"
+            DisplayProperty="GetAssignmentDisplayName"
+            Placeholder="No Active Roles">
+            
+            <LeftIcon>
+                <div style="display: flex; align-items: center; padding-left: 1rem;"> 
+                    <i class="fi fi-rr-home-location-alt" style="color: white; font-size: 1.1rem; margin-right: 0.5rem; display: flex;"></i> 
+                </div>
+            </LeftIcon>
+            
+            <CustomIcon>
+                <i class="fi fi-rr-angle-small-down" style="color: white; font-size: 1.2rem; display: flex; align-items: center;"></i>
+            </CustomIcon>
+            
+        </CMIS.Components.Shared.CustomDropdown>
+    </div>
+
+    <nav class="sidebar-nav">
+        <!-- Dashboard (All Roles) -->
+        <a href="/@CurrentRoleSlug" class="sidebar-link @IsActive($"/{CurrentRoleSlug}")">
+            <i class="fi fi-sr-objects-column"></i> Dashboard
+        </a>
+
+        <a href="/@CurrentRoleSlug/events" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/events")">
+            <i class="fi fi-sr-calendar-day"></i> Events & Programs
+        </a>
+        
+        <AuthorizeView Roles="Board of Directors,Leadership Council">
+            <a href="/@CurrentRoleSlug/approval-workflow" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/approval-workflow")">
+                <i class="fi fi-sr-terms-check"></i> Approval Workflow
+            </a>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Board of Directors">
+            <a href="/@CurrentRoleSlug/collections" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/collections")">
+                <i class="fi fi-sr-donate"></i> Collections
+            </a>
+        </AuthorizeView>
+
+        <a href="/@CurrentRoleSlug/financial/proposals" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/financial/proposals")">
+            <i class="fi fi-sr-wallet-money"></i> Finance
+        </a>
+        
+        <AuthorizeView Roles="Board of Directors,District Head,Head Pastor">
+            <a href="/@CurrentRoleSlug/staff" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/staff")">
+                <i class="fi fi-sr-users-alt"></i> Staff Management
+            </a>
+        </AuthorizeView>
+        
+        <AuthorizeView Roles="Board of Directors,Leadership Council,District Head">
+            <a href="/@CurrentRoleSlug/membership/districts" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/membership/districts")">
+                <i class="fi fi-sr-map"></i> Districts
+            </a>
+        </AuthorizeView>
+        
+        <AuthorizeView Roles="Board of Directors, Leadership Council, District Head">
+            <a href="/@CurrentRoleSlug/membership/churches" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/membership/churches")">
+                <i class="fi fi-sr-church"></i> Local Church
+            </a>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Head Pastor">
+            <a href="/@CurrentRoleSlug/services" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/services")">
+                <i class="fi fi-sr-customer-care"></i> Services
+            </a>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Head Pastor, Ministry Head">
+            <a href="/@CurrentRoleSlug/membership/directory" class="sidebar-link @IsActive($"/{CurrentRoleSlug}/membership/directory")">
+                <i class="fi fi-sr-member-list"></i> Member Directory
+            </a>
+        </AuthorizeView>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="footer-email">@userEmail</div>
+        <button class="footer-link" @onclick="HandleSignOut">
+            <i class="fi fi-rr-sign-out-alt"></i> Sign out
+        </button>
+    </div>
+</aside>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+
+    private int activeAssignmentId;
+    private List<LeadershipAssignment> userRoles = new();
+    private string userEmail = "";
+
+    private string CurrentRoleSlug
+    {
+        get
+        {
+            var activeRole = userRoles.FirstOrDefault(r => r.AssignmentId == activeAssignmentId)?.Role?.RoleName;
+            
+            return activeRole switch
+            {
+                "Ministry Head" => "ministry-head",
+                "Head Pastor" => "head-pastor",
+                "District Head" => "district-head",
+                "District Leader" => "district-leader",
+                "National Leader" => "national-leader",
+                "Board of Directors" => "board-of-directors",
+                "Leadership Council" => "leadership-council",
+                _ => "dashboard"
+            };
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+            var roleIdClaim = user.FindFirst("RoleId")?.Value;
+            var churchIdClaim = user.FindFirst("ChurchId")?.Value;
+            var districtIdClaim = user.FindFirst("DistrictId")?.Value;
+
+            int currentRoleId = int.TryParse(roleIdClaim, out var rId) ? rId : 0;
+            int currentChurchId = int.TryParse(churchIdClaim, out var cId) ? cId : 0;
+            int currentDistrictId = int.TryParse(districtIdClaim, out var dId) ? dId : 0;
+
+            var accountIdClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(accountIdClaim, out var accountId))
+            {
+                using var scope = ScopeFactory.CreateScope();
+                var localDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                var account = await localDb.Accounts.FirstOrDefaultAsync(a => a.AccountId == accountId);
+                if (account != null)
+                {
+                    userRoles = await localDb.LeadershipAssignments
+                        .Include(la => la.Role)
+                        .Include(la => la.Church)
+                        .Include(la => la.District)
+                        .Where(la => la.ProfileId == account.ProfileId && la.Status == "Active")
+                        .ToListAsync();
+
+                    var activeAssignment = userRoles.FirstOrDefault(la => 
+                        la.RoleId == currentRoleId && 
+                        (la.ChurchId ?? 0) == currentChurchId &&
+                        (la.DistrictId ?? 0) == currentDistrictId);
+
+                    if (activeAssignment != null)
+                    {
+                        activeAssignmentId = activeAssignment.AssignmentId;
+                    }
+                    else if (userRoles.Any())
+                    {
+                        activeAssignmentId = userRoles.First().AssignmentId;
+                    }
+                }
+            }
+        }
+    }
+
+    private string GetAssignmentDisplayName(LeadershipAssignment assignment)
+    {
+        if (assignment == null) return "Unknown Role";
+        
+        var role = assignment.Role?.RoleName ?? "Unknown Role";
+        var place = "";
+        
+        if (assignment.Church != null)
+        {
+            place = assignment.Church.ChurchName;
+        }
+        else if (assignment.District != null)
+        {
+            place = assignment.District.DistrictName;
+        }
+        
+        if (!string.IsNullOrEmpty(place))
+        {
+            // Clean up redundant church name prefixes that are already present in the brand header
+            place = place.Replace("Jesus Our Banner", "", StringComparison.OrdinalIgnoreCase)
+                         .Replace("Ministry", "", StringComparison.OrdinalIgnoreCase)
+                         .Trim(' ', '-', ',');
+                         
+            return $"{role} - {place}";
+        }
+        
+        return role;
+    }
+
+    private async Task HandleRoleChange(LeadershipAssignment assignment)
+    {
+        if (assignment != null && assignment.Role != null)
+        {
+            activeAssignmentId = assignment.AssignmentId;
+            var authProvider = (CustomAuthStateProvider)AuthStateProvider;
+            
+            await authProvider.SwitchRoleContextAsync(
+                assignment.RoleId, 
+                assignment.Role.RoleName, 
+                assignment.ChurchId ?? 0, 
+                assignment.DistrictId ?? 0);
+            
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+        }
+    }
+
+    private string IsActive(string href)
+    {
+        var uri = Navigation.Uri;
+        var relativePath = Navigation.ToBaseRelativePath(uri);
+        var path = "/" + relativePath;
+
+        if (href == $"/{CurrentRoleSlug}" && (path == $"/{CurrentRoleSlug}" || path == $"/{CurrentRoleSlug}/")) return "active";
+        if (href != $"/{CurrentRoleSlug}" && path.StartsWith(href, StringComparison.OrdinalIgnoreCase)) return "active";
+        return "";
+    }
+
+    private async Task HandleSignOut()
+    {
+        var authProvider = (CustomAuthStateProvider)AuthStateProvider;
+        await authProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // Forces the Sidebar to re-render and re-evaluate the IsActive() method
+        StateHasChanged(); 
+    }
+
+    // Prevents memory leaks by unsubscribing when the component is destroyed
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

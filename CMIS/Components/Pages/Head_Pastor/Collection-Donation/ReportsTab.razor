@@ -1,0 +1,160 @@
+@using CMIS.Components.Pages.Head_Pastor.Collection_Donation
+
+<style>
+    .reports-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 24px;
+    }
+    @@media (max-width: 1280px) {
+        .reports-summary-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @@media (max-width: 960px) {
+        .reports-summary-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @@media (max-width: 600px) {
+        .reports-summary-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="reports-summary-grid mb-6">
+    <MudCard Elevation="2" Class="rounded-lg h-100 pa-4" Style="border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+        <div class="d-flex align-center justify-space-between mb-2">
+            <MudText Typo="Typo.subtitle2" Style="color: #6b7c93; font-weight: 600;">Total Income</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Primary" Size="Size.Small" />
+        </div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #0d2137;">₱ @TotalIncome.ToString("N0")</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Success" Class="d-flex align-center mt-1">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />
+            +12% from last month
+        </MudText>
+    </MudCard>
+
+    <MudCard Elevation="2" Class="rounded-lg h-100 pa-4" Style="border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+        <div class="d-flex align-center justify-space-between mb-2">
+            <MudText Typo="Typo.subtitle2" Style="color: #6b7c93; font-weight: 600;">Total Tithes</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism" Color="Color.Info" Size="Size.Small" />
+        </div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #0d2137;">₱ @TotalTithes.ToString("N0")</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Success" Class="d-flex align-center mt-1">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />
+            +5% from last month
+        </MudText>
+    </MudCard>
+
+    <MudCard Elevation="2" Class="rounded-lg h-100 pa-4" Style="border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+        <div class="d-flex align-center justify-space-between mb-2">
+            <MudText Typo="Typo.subtitle2" Style="color: #6b7c93; font-weight: 600;">Total Offerings</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.CardGiftcard" Color="Color.Secondary" Size="Size.Small" />
+        </div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #0d2137;">₱ @TotalOfferings.ToString("N0")</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Success" Class="d-flex align-center mt-1">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />
+            +8% from last month
+        </MudText>
+    </MudCard>
+
+    <MudCard Elevation="2" Class="rounded-lg h-100 pa-4" Style="background: linear-gradient(135deg, #0d2137 0%, #1e3a5f 100%); color: white; box-shadow: 0 4px 12px rgba(13, 33, 55, 0.2);">
+        <div class="d-flex align-center justify-space-between mb-2">
+            <MudText Typo="Typo.subtitle2" Style="font-weight: 600; color: #a4b5c7;">Net Balance</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Surface" Size="Size.Small" />
+        </div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700;">₱ @NetBalance.ToString("N0")</MudText>
+        <MudText Typo="Typo.caption" Class="d-flex align-center mt-1" Style="color: #a4b5c7;">
+            Overall positive standing
+        </MudText>
+    </MudCard>
+
+    <MudCard Elevation="2" Class="rounded-lg h-100 pa-4" Style="border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+        <div class="d-flex align-center justify-space-between mb-2">
+            <MudText Typo="Typo.subtitle2" Style="color: #6b7c93; font-weight: 600;">Active Recurring</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.Autorenew" Color="Color.Warning" Size="Size.Small" />
+        </div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #0d2137;">@ActiveRecurring</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Success" Class="d-flex align-center mt-1">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" />
+            +3 new commitments
+        </MudText>
+    </MudCard>
+</div>
+
+@* FINANCIAL OVERVIEW SECTION (Charts) *@
+<MudGrid Class="mb-6">
+    <MudItem xs="12">
+        <MudCard Elevation="0" Class="premium-chart-card pa-6 h-100">
+            <div class="chart-header-row">
+                <div>
+                    <h3 class="chart-title">Income Overview</h3>
+                    <p class="chart-subtitle">Year-to-Date income analysis</p>
+                </div>
+                <div class="chart-trend-box">
+                    <span class="chart-trend-value">₱ @TotalIncome.ToString("N0")</span>
+                    <span class="chart-trend-label">Total YTD</span>
+                </div>
+            </div>
+            @{
+                var incData = IncomeExpenseSeries.ElementAtOrDefault(0)?.Data.ToArray() ?? new double[12];
+                double maxVal = incData.Any() ? incData.Max() : 0;
+                if (maxVal == 0) maxVal = 1;
+            }
+            <div class="custom-bar-chart">
+                @for (int i = 0; i < Months.Length; i++)
+                {
+                    double incVal = incData.Length > i ? incData[i] : 0;
+                    double incPct = incVal / maxVal * 100;
+                    <div class="custom-bar-group">
+                        <div class="custom-bar-wrapper">
+                            <div class="custom-bar income" style="height: @(incPct.ToString(System.Globalization.CultureInfo.InvariantCulture))%" data-tooltip="Income: ₱@incVal.ToString("N0")"></div>
+                        </div>
+                        <span class="custom-bar-label">@Months[i]</span>
+                    </div>
+                }
+            </div>
+            <div class="custom-chart-legend">
+                <div class="legend-item"><div class="legend-color income"></div>Income</div>
+            </div>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@* MINISTRY FINANCIAL ACTIVITY *@
+<MudCard Elevation="2" Class="rounded-lg h-100 mb-6" Style="border: 1px solid #e2e8f0;">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6" Style="font-weight: 700; color: #0d2137;">Ministry Financial Activity</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudTable Items="@MinistryActivities" Hover="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Ministry Name</MudTh>
+                <MudTh>Donations</MudTh>
+                <MudTh>Expenses</MudTh>
+                <MudTh>Net Balance</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Ministry Name">@context.Name</MudTd>
+                <MudTd DataLabel="Donations" Style="color: #4caf50;">₱@context.Donations.ToString("N0")</MudTd>
+                <MudTd DataLabel="Expenses" Style="color: #f44336;">₱@context.Expenses.ToString("N0")</MudTd>
+                <MudTd DataLabel="Net Balance" Style="font-weight: 600;">₱@((context.Donations - context.Expenses).ToString("N0"))</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public decimal TotalIncome { get; set; }
+    [Parameter] public decimal TotalTithes { get; set; }
+    [Parameter] public decimal TotalOfferings { get; set; }
+    [Parameter] public decimal TotalExpenses { get; set; }
+    [Parameter] public decimal NetBalance { get; set; }
+    [Parameter] public int ActiveRecurring { get; set; }
+    
+    [Parameter] public List<MudBlazor.ChartSeries<double>> IncomeExpenseSeries { get; set; } = new();
+    [Parameter] public string[] Months { get; set; } = Array.Empty<string>();
+    
+    [Parameter] public double[] ExpenseDistribution { get; set; } = Array.Empty<double>();
+    [Parameter] public string[] ExpenseLabels { get; set; } = Array.Empty<string>();
+    
+    [Parameter] public List<MinistryActivity> MinistryActivities { get; set; } = new();
+}

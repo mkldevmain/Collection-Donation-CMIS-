@@ -1,0 +1,107 @@
+@page "/membership/churches"
+@page "/{RoleSlug}/membership/churches"
+@layout AdminLayout
+@using CMIS.Data
+@using Models = CMIS.Models  @* Create an alias to avoid confusion *@
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Churches - Board of Directors</PageTitle>
+
+<div style="display: flex; flex-direction: column; flex: 1; box-sizing: border-box; padding: 2rem 2rem 0rem 2rem; font-family: 'Inter', sans-serif;">
+    <CMIS.Components.Shared.PageHeader Title="Local Churches" />
+
+    <div style="display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background-color: white; border-radius: 20px 20px 0px 0px; flex: 1; height: 100%;">
+        <div style="display: flex; gap: 0.7rem; width: 100%;">
+            <div class="mmbr-search-container">
+                <i class="fi fi-rr-search"></i>
+                <input type="text" placeholder="Search for Church or Address" @bind="searchQuery" @bind:event="oninput" class="mmbr-searchinput"/>
+            </div>
+
+            <div style="width: 300px;">  
+                <CMIS.Components.Shared.CustomDropdown 
+                    TItem="Models.District"
+                    Items="districts"
+                    SelectedValue="@districts.FirstOrDefault(d => d.DistrictId == selectedDistrictId)"
+                    SelectedValueChanged="@((Models.District? selected) => selectedDistrictId = selected?.DistrictId ?? 0)"
+                    DisplayProperty="@(d => d.DistrictName)"
+                    DefaultOptionText="All Districts"
+                    DefaultOptionValue="null" />
+            </div>
+                
+            <button type="button" @onclick="OpenModal" class="mmbr-createbutton" style="gap: 2px; padding-left: 0.6rem;">
+                <i class="fi fi-rr-plus-small" style="display: flex; align-self: center; font-size: 1.3rem;"></i> Create Church
+            </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+            @foreach (var church in FilteredChurches)
+            {
+                <div style="position:relative; background: white; border: 1px solid #e8ecf1; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;" @onclick='() => Nav.NavigateTo($"/churches/details/{church.ChurchId}")'>
+                    <div style="height: 160px; background: #cbd5e1; position: relative;">
+                        <img src="https://images.pexels.com/photos/31893708/pexels-photo-31893708.jpeg" style="width: 100%; height: 100%; object-fit: cover;" alt="Church" />
+                    </div>
+                    <div style="padding: 1.2rem; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
+                        @* Access Church properties correctly *@
+                        <h3 style="margin: 0 0 0.2rem 0; color: #0d2137; font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@church.ChurchName</h3>
+                        <p style="margin: 0 0 1.2rem 0; color: #94a3b8; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@church.Address</p>
+                        
+                        <div style="position:absolute; left: 16px; top: 16px; display: inline-block; background: white; color: #0d2137; padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            @* Access the navigation property *@
+                            @(church.District?.DistrictName ?? "National")
+                        </div>
+
+                        <button type="button" class="cardbutton" @onclick='() => Nav.NavigateTo($"/churches/details/{church.ChurchId}")'>View Details</button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (isModalOpen)
+{
+    <CMIS.Components.Dialogs.ChurchCreationDialog OnClose="CloseModal" OnSuccess="HandleSuccess" />
+}
+
+@code {
+    [Parameter] public string? RoleSlug { get; set; }
+    private bool isModalOpen = false;
+    private string searchQuery = "";
+    private int selectedDistrictId = 0;
+    
+    // Use the Models alias to specify we want the Data Models
+    private List<Models.District> districts = new();
+    private List<Models.Church> churches = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        districts = await Db.Districts.OrderBy(d => d.DistrictName).ToListAsync();
+        await LoadChurches();
+    }
+
+    private async Task LoadChurches()
+    {
+        // Include the District relationship
+        churches = await Db.Churches.Include(c => c.District).ToListAsync();
+    }
+
+    private IEnumerable<Models.Church> FilteredChurches => churches.Where(c => 
+        (selectedDistrictId == 0 || c.DistrictId == selectedDistrictId) &&
+        (string.IsNullOrWhiteSpace(searchQuery) || 
+         c.ChurchName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+         (c.Address != null && c.Address.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)))
+    );
+
+    private void OpenModal() => isModalOpen = true;
+    private void CloseModal() => isModalOpen = false;
+    
+    private async Task HandleSuccess()
+    {
+        isModalOpen = false;
+        await LoadChurches();
+        StateHasChanged(); 
+    }
+}

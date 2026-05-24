@@ -1,0 +1,110 @@
+@rendermode InteractiveServer
+
+<div style="position: relative; font-family: 'Inter', sans-serif;">
+    @* Top row: Label + Clear button *@
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+        <label style="font-size: 0.85rem; font-weight: 700; color: #0d2137;">
+            @Label
+        </label>
+        @if (SelectedId != 0)
+        {
+            <button type="button" @onclick="ClearSelection"
+                    style="background: none; border: none; color: #6b7c93; font-size: 0.75rem; cursor: pointer; padding: 0; font-family: 'Inter', sans-serif; text-decoration: underline;">
+                Clear
+            </button>
+        }
+    </div>
+
+    @* Trigger box *@
+    <div @onclick="ToggleDropdown" @onclick:stopPropagation="true"
+         style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid @(isOpen ? "#0d2137" : "#e2e8f0"); border-radius: 6px; box-sizing: border-box; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: white; transition: border-color 0.2s ease; min-height: 40px;">
+        <span style="color: @(SelectedId != 0 ? "#0d2137" : "#94a3b8"); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            @(SelectedId != 0 ? SelectedDisplayName : Placeholder)
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7c93" stroke-width="2"
+             style="flex-shrink: 0; transform: rotate(@(isOpen ? "180" : "0")deg); transition: transform 0.2s ease;">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+
+    @* Absolute-positioned dropdown menu *@
+    @if (isOpen)
+    {
+        <div style="position: absolute; top: 100%; left: 0; right: 0; z-index: 50; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 8px 24px rgba(13, 33, 55, 0.12); margin-top: 4px; overflow: hidden;">
+            @* Search input *@
+            <div style="padding: 0.6rem;">
+                <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Search..."
+                       style="width: 100%; padding: 0.5rem 0.7rem; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 0.85rem; font-family: 'Inter', sans-serif; outline: none; color: #0d2137;" />
+            </div>
+
+            @* Scrollable item list *@
+            <div style="max-height: 200px; overflow-y: auto; padding-bottom: 0.3rem;">
+                @if (FilteredItems.Any())
+                {
+                    @foreach (var item in FilteredItems)
+                    {
+                        <div @onclick="() => SelectItem(item.Id)" @onclick:stopPropagation="true"
+                             style="padding: 0.5rem 0.8rem; cursor: pointer; font-size: 0.85rem; color: @(item.Id == SelectedId ? "white" : "#0d2137"); background: @(item.Id == SelectedId ? "#0d2137" : "transparent"); transition: background 0.15s ease;">
+                            @item.Name
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="padding: 0.8rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                        No items found
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Invisible backdrop to close dropdown *@
+        <div @onclick="CloseDropdown" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 40;"></div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Select";
+    [Parameter] public string Placeholder { get; set; } = "Select an item";
+    [Parameter] public List<DropdownItem> Items { get; set; } = new();
+    [Parameter] public int SelectedId { get; set; }
+    [Parameter] public EventCallback<int> OnItemSelected { get; set; }
+
+    private bool isOpen = false;
+    private string searchTerm = "";
+
+    private string SelectedDisplayName =>
+        Items.FirstOrDefault(i => i.Id == SelectedId)?.Name ?? Placeholder;
+
+    private IEnumerable<DropdownItem> FilteredItems =>
+        string.IsNullOrWhiteSpace(searchTerm)
+            ? Items
+            : Items.Where(i => i.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private void ToggleDropdown()
+    {
+        isOpen = !isOpen;
+        if (isOpen) searchTerm = "";
+    }
+
+    private void CloseDropdown() => isOpen = false;
+
+    private async Task SelectItem(int id)
+    {
+        await OnItemSelected.InvokeAsync(id);
+        isOpen = false;
+        searchTerm = "";
+    }
+
+    private async Task ClearSelection()
+    {
+        await OnItemSelected.InvokeAsync(0);
+        searchTerm = "";
+    }
+
+    public class DropdownItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

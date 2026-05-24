@@ -1,0 +1,338 @@
+@page "/membership/directory"
+@page "/{RoleSlug}/membership/directory"
+@layout AdminLayout
+@using CMIS.Data
+@using CMIS.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Member Directory</PageTitle>
+
+<div style="padding: 2rem; font-family: 'Inter', sans-serif;">
+    @* ──────────── PAGE HEADER ──────────── *@
+    <CMIS.Components.Shared.PageHeader Title="Member Directory" />
+
+    @* ──────────── STATS CARDS ──────────── *@
+    <div class="stats-container">
+        <!-- Total Members -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background-color: #f1f5f9; color: #64748b;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div>
+                <div class="stat-label">Total Members</div>
+                <div class="stat-value">@totalMembersCount.ToString("N0")</div>
+            </div>
+        </div>
+
+        <!-- New Members -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background-color: #eff6ff; color: #3b82f6;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+            </div>
+            <div>
+                <div class="stat-label">New Members</div>
+                <div class="stat-value">@newMembersCount.ToString("N0")</div>
+            </div>
+        </div>
+
+        <!-- Active Members -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background-color: #f0fdf4; color: #22c55e;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <div>
+                <div class="stat-label">Active Members</div>
+                <div class="stat-value">@activeMembersCount.ToString("N0")</div>
+            </div>
+        </div>
+
+        <!-- Inactive Members -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background-color: #fff7ed; color: #f97316;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"></line><line x1="23" y1="8" x2="18" y2="13"></line></svg>
+            </div>
+            <div>
+                <div class="stat-label">Inactive Members</div>
+                <div class="stat-value">@inactiveMembersCount.ToString("N0")</div>
+            </div>
+        </div>
+    </div>
+
+    @* ──────────── TABLE CONTAINER ──────────── *@
+    <div class="table-container">
+        
+        @* Toolbar *@
+        <div class="toolbar">
+            <div style="position: relative; flex-grow: 1;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%);">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" placeholder="Search for Title" @bind="searchQuery" @bind:event="oninput" class="searchinput" />
+            </div>
+
+            <select @bind="selectedMinistry" class="filter-select">
+                <option value="">Select Ministry</option>
+                @foreach (var min in ministryOptions)
+                {
+                    <option value="@min">@min</option>
+                }
+            </select>
+
+            <button type="button" class="sortbybutton" @onclick="ToggleSort">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="16" y2="12"></line><line x1="4" y1="18" x2="12" y2="18"></line>
+                </svg>
+                Sort by: Date
+            </button>
+        </div>
+
+        @* Table Header *@
+        <div class="table-header">
+            <div>Name</div>
+            <div>Ministry</div>
+            <div>Role</div>
+            <div>Date Joined</div>
+            <div>Status</div>
+            <div></div>
+        </div>
+
+        @* Table Rows *@
+        @if (isLoading)
+        {
+            <div style="text-align: center; padding: 3rem; color: #94a3b8;">Loading members...</div>
+        }
+        else if (!FilteredMembers.Any())
+        {
+            <div style="text-align: center; padding: 3rem; color: #94a3b8;">No members found.</div>
+        }
+        else
+        {
+            @foreach (var member in FilteredMembers)
+            {
+                <div class="table-row">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <img src="https://i.pravatar.cc/150?img=@(member.ProfileId % 70)" alt="avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #e8ecf1;" />
+                        <span style="font-weight: 600; color: #0d2137;">@member.FullName</span>
+                    </div>
+                    <div style="color: #6b7c93;">@member.Ministry</div>
+                    <div style="color: #6b7c93;">Member</div>
+                    <div style="color: #6b7c93;">@member.DateJoined</div>
+                    <div>
+                        <span class="status-tag @(member.Status == "New" ? "status-new" : member.Status == "Active" ? "status-active" : "status-inactive")">
+                            @member.Status
+                        </span>
+                    </div>
+                    <div style="position: relative;">
+                        <button class="action-btn" @onclick="() => ToggleActionMenu(member.ProfileId)">
+                            •••
+                        </button>
+                        
+                        @if (openActionMenuId == member.ProfileId)
+                        {
+                            <div class="action-menu">
+                                <div class="action-item" @onclick="() => ToggleProfileStatus(member.ProfileId)">
+                                    @(member.ProfileStatus == "Active" ? "Set as Inactive" : "Set as Active")
+                                </div>
+                            </div>
+                            
+                            @* Invisible backdrop to close the menu when clicking outside *@
+                            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 5;" @onclick="() => openActionMenuId = null"></div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? RoleSlug { get; set; }
+    private int activeChurchId = 0;
+    private bool isLoading = true;
+    private string searchQuery = "";
+    private string selectedMinistry = "";
+    private bool sortAscending = false;
+
+    private List<MemberView> allMembers = new();
+    private List<string> ministryOptions = new();
+    
+    // Stats
+    private int totalMembersCount = 0;
+    private int newMembersCount = 0;
+    private int activeMembersCount = 0;
+    private int inactiveMembersCount = 0;
+
+    private int? openActionMenuId = null;
+
+    private class MemberView
+    {
+        public int ProfileId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Ministry { get; set; } = "—";
+        public string DateJoined { get; set; } = "—";
+        public DateTime? RawDate { get; set; }
+        public string Status { get; set; } = ""; 
+        public string ProfileStatus { get; set; } = ""; 
+    }
+
+    // Replace OnInitializedAsync with OnAfterRenderAsync
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // firstRender ensures this only checks once when the page loads
+        if (firstRender)
+        {
+            var authState = await AuthState.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            // Now that the browser is connected, this check will succeed
+            if (user.Identity == null || !user.Identity.IsAuthenticated)
+            {
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            // Extract email/username from claims
+            var userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                        ?? user.Identity.Name;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            // Query the Db.Accounts table using the extracted claim
+            var account = await Db.Accounts
+                .Include(a => a.Profile)
+                .ThenInclude(p => p.LeadershipAssignments)
+                .FirstOrDefaultAsync(a => a.Email == userEmail || a.Username == userEmail);
+
+            if (account == null)
+            {
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            // Find active LeadershipAssignment with a valid ChurchId
+            var activeAssignment = account.Profile?.LeadershipAssignments
+                .FirstOrDefault(la => la.Status == "Active" && la.ChurchId.HasValue);
+
+            if (activeAssignment == null || !activeAssignment.ChurchId.HasValue)
+            {
+                Nav.NavigateTo("/login"); // Or redirect to an "Unauthorized" page
+                return;
+            }
+
+            activeChurchId = activeAssignment.ChurchId.Value;
+
+            await LoadData();
+            
+            // CRITICAL: Tell Blazor to update the UI now that the data is loaded
+            StateHasChanged(); 
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        var profiles = await Db.Profiles
+            .Include(p => p.Attendances)
+            .Include(p => p.ProfileMinistries)
+                .ThenInclude(pm => pm.Ministry)
+            .Where(p => p.ChurchId == activeChurchId && p.IsMember == true)
+            .ToListAsync();
+
+        allMembers = profiles.Select(p => new MemberView
+        {
+            ProfileId = p.ProfileId,
+            FullName = $"{p.FirstName} {p.MiddleName} {p.LastName}".Replace("  ", " ").Trim(),
+            Ministry = p.ProfileMinistries.FirstOrDefault(pm => pm.Status == "Active")?.Ministry?.MinistryName ?? "—",
+            DateJoined = p.CreatedAt?.ToString("MM/dd/yyyy") ?? "—",
+            RawDate = p.CreatedAt,
+            Status = GetMemberStatus(p),
+            ProfileStatus = p.ProfileStatus
+        }).ToList();
+
+        // Populate Ministries dropdown filter based on actual available ministries
+        ministryOptions = allMembers.Select(m => m.Ministry).Where(m => m != "—").Distinct().OrderBy(m => m).ToList();
+
+        // Calculate Stats
+        totalMembersCount = allMembers.Count;
+        newMembersCount = allMembers.Count(m => m.Status == "New");
+        activeMembersCount = allMembers.Count(m => m.Status == "Active");
+        inactiveMembersCount = allMembers.Count(m => m.Status == "Inactive");
+
+        isLoading = false;
+    }
+
+    private string GetMemberStatus(Profile p)
+    {
+        if (p.ProfileStatus == "Inactive") return "Inactive";
+
+        var thirtyDaysAgo = DateTime.Now.AddDays(-30);
+        
+        if (p.CreatedAt.HasValue && p.CreatedAt.Value >= thirtyDaysAgo)
+        {
+            return "New";
+        }
+
+        var thirtyDaysAgoDateOnly = DateOnly.FromDateTime(thirtyDaysAgo);
+        bool hasRecentAttendance = p.Attendances != null && p.Attendances.Any(a => a.AttendanceDate >= thirtyDaysAgoDateOnly);
+
+        if (hasRecentAttendance)
+        {
+            return "Active";
+        }
+
+        return "Inactive";
+    }
+
+    private IEnumerable<MemberView> FilteredMembers
+    {
+        get
+        {
+            var result = allMembers.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                result = result.Where(m => m.FullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedMinistry))
+            {
+                result = result.Where(m => m.Ministry == selectedMinistry);
+            }
+
+            return sortAscending ? result.OrderBy(m => m.RawDate) : result.OrderByDescending(m => m.RawDate);
+        }
+    }
+
+    private void ToggleSort() => sortAscending = !sortAscending;
+
+    private void ToggleActionMenu(int profileId)
+    {
+        if (openActionMenuId == profileId)
+            openActionMenuId = null;
+        else
+            openActionMenuId = profileId;
+    }
+
+    private async Task ToggleProfileStatus(int profileId)
+    {
+        var profile = await Db.Profiles.FindAsync(profileId);
+        if (profile != null)
+        {
+            profile.ProfileStatus = profile.ProfileStatus == "Active" ? "Inactive" : "Active";
+            await Db.SaveChangesAsync();
+            
+            openActionMenuId = null;
+            await LoadData();
+        }
+    }
+}

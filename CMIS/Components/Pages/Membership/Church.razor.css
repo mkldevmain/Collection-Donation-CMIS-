@@ -1,0 +1,57 @@
+.createbutton {
+  background: linear-gradient(to bottom, #0c3d7d, #01224d);
+  border: 1px solid rgba(190, 175, 175, 0.3);
+  color: white;
+  padding: 0.4rem 1rem;
+  border-radius: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  white-space: nowrap;
+}
+
+.sortbybutton {
+  border: 1px solid rgba(190, 175, 175, 0.3);
+  background-color: white;
+  color: #727677;
+  padding: 0.4rem 1rem;
+  border-radius: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  white-space: nowrap;
+}
+
+.cardbutton {
+  background: #01224d;
+  border: 0px;
+  color: white;
+  padding: 0.4rem 1rem;
+  border-radius: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  white-space: nowrap;
+}
+
+.searchinput {
+  border: 1px solid rgba(190, 175, 175, 0.3);
+  color: #01224d;
+  padding: 0.4rem 1rem;
+  border-radius: 13px;
+  font-weight: 500;
+  font-family: "Inter", sans-serif;
+  width: 100%;
+  background: transparent;
+  outline: none;
+}
+
+.searchinput::placeholder {
+  color: rgba(1, 34, 77, 0.4);
+  font-weight: 400;
+  font-family: "Inter", sans-serif;
+}
+
+body {
+  background: #fafafa !important;
+}

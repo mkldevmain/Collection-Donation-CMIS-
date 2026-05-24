@@ -1,0 +1,59 @@
+<MudGrid Class="mt-6">
+    <MudItem xs="12" md="8">
+        <MudCard Elevation="0" Class="premium-card h-full pa-2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <h3 class="report-title">Income vs Expenses Trend</h3>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@Series" @bind-SelectedIndex="Index" XAxisLabels="@Labels" Width="100%" Height="350px" />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="0" Class="premium-card h-full pa-2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <h3 class="report-title">Income Classification</h3>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex flex-column gap-5 mt-4" style="min-height: 300px; justify-content: center;">
+                    @for (int i = 0; i < DonutData.Length; i++)
+                    {
+                        int index = i; // local capture for loop
+                        <div class="d-flex flex-column w-100">
+                            <div class="d-flex justify-space-between mb-2">
+                                <MudText Typo="Typo.body2" Style="font-weight: 600; color: #4a5568;">@DonutLabels[index]</MudText>
+                                <MudText Typo="Typo.body2" Style="font-weight: 700; color: #0d2137;">@DonutData[index]%</MudText>
+                            </div>
+                            <MudProgressLinear Color="GetColor(index)" Value="@DonutData[index]" Size="Size.Large" Class="rounded-xl" Style="height: 8px; border-radius: 8px;" />
+                        </div>
+                    }
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private int Index = -1; //default value cannot be 0 -> first index is 0
+    public List<ChartSeries<double>> Series = new List<ChartSeries<double>>()
+    {
+        new ChartSeries<double>() { Name = "Income", Data = new double[] { 90, 79, 72, 69, 59, 62, 62, 59, 65 } },
+        new ChartSeries<double>() { Name = "Expenses", Data = new double[] { 35, 41, 33, 45, 35, 23, 40, 50, 41 } },
+    };
+    public string[] Labels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep" };
+
+    public double[] DonutData = { 50, 25, 15, 10 };
+    public string[] DonutLabels = { "Tithes", "Offerings", "Donations", "Events" };
+
+    private Color GetColor(int index) => index switch
+    {
+        0 => Color.Primary,
+        1 => Color.Success,
+        2 => Color.Warning,
+        _ => Color.Info
+    };
+}

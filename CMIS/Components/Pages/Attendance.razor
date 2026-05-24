@@ -1,0 +1,106 @@
+@page "/staff/attendance"
+@using Models = CMIS.Models
+@using Microsoft.EntityFrameworkCore
+@inject CMIS.Data.ApplicationDbContext Db
+@layout PublicPageLayout
+@rendermode InteractiveServer
+
+<CMIS.Components.Layout.PublicHeader />
+
+<section class="attendance-wrapper">
+   <div style="min-height: 100vh; background: #f1f5f9; display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; width: 100%; max-width: 500px; border-radius: 20px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        <h1 style="font-family: 'Outfit', sans-serif; color: #0d2137; font-size: 2rem; margin-bottom: 0.5rem;">Join today's worship.</h1>
+        <p style="color: #6b7c93; margin-bottom: 2rem;">Please enter guest details.</p>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+
+            <div style="margin-bottom: 1.5rem;">
+    <label style="font-size: 0.8rem; font-weight: 700; color: #0d2137;">Recording for Church:</label>
+    <select @bind="staffChurchId" class="input-field" style="background: #f8fafc;">
+        @foreach (var church in availableChurches)
+        {
+            <option value="@church.ChurchId">@church.ChurchName</option>
+        }
+    </select>
+</div>
+
+            <input type="text" @bind="form.FirstName" placeholder="First Name" class="input-field" />
+            <input type="text" @bind="form.MiddleName" placeholder="Middle Name" class="input-field" />
+            <input type="text" @bind="form.LastName" placeholder="Last Name" class="input-field" />
+            <input type="text" @bind="form.Phone" placeholder="Phone Number (+63)" class="input-field" />
+            
+            <label style="font-size: 0.8rem; font-weight: 700; color: #0d2137;">Date of Birth</label>
+            <input type="date" @bind="form.BirthDate" class="input-field" />
+
+            @if (success) { <div style="color: #166534; background: #dcfce7; padding: 0.8rem; border-radius: 8px; font-weight: 600;">Check-in Complete!</div> }
+
+            <button @onclick="SubmitCheckin" style="background: #0d2137; color: white; padding: 1rem; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 1rem;">
+                CHECK IN →
+            </button>
+        </div>
+    </div>
+</div>
+</section>
+
+<style>
+    .input-field { width: 100%; padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 10px; font-family: 'Inter', sans-serif; box-sizing: border-box; }
+</style>
+
+@code {
+    private List<Models.Church> availableChurches = new();
+    private CheckinForm form = new();
+    private bool success = false;
+    
+    private int staffChurchId = 0; 
+
+    protected override async Task OnInitializedAsync()
+        {
+            availableChurches = await Db.Churches.ToListAsync();
+            
+            if (availableChurches.Any()) staffChurchId = availableChurches.First().ChurchId;
+        }
+
+    private async Task SubmitCheckin()
+    {
+        // 1. CREATE PROFILE
+        var profile = new Models.Profile {
+            FirstName = form.FirstName,
+            MiddleName = form.MiddleName,
+            LastName = form.LastName,
+            ContactNumber = form.Phone,
+            BirthDate = form.BirthDate ?? DateTime.Now,
+            ChurchId = staffChurchId,
+            IsMember = false, // Always false for new guests
+            ProfileStatus = "Active",
+            Sex = "Male" // Placeholder
+        };
+        Db.Profiles.Add(profile);
+        await Db.SaveChangesAsync(); // Saves to generate profile_id
+
+        // 2. CREATE ATTENDANCE
+        Db.Attendances.Add(new Models.Attendance {
+            ProfileId = profile.ProfileId,
+            ChurchId = staffChurchId,
+            AttendanceDate = DateOnly.FromDateTime(DateTime.Now)
+        });
+
+        // 3. CREATE WAITLIST
+        Db.Waitlists.Add(new Models.Waitlist {
+            ProfileId = profile.ProfileId,
+            Status = "Pending"
+        });
+
+        await Db.SaveChangesAsync();
+        success = true;
+        form = new();
+    }
+
+    private class CheckinForm {
+        public string FirstName { get; set; } = "";
+        public string MiddleName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public DateTime? BirthDate { get; set; } = DateTime.Now;
+    }
+}

@@ -1,0 +1,58 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        @if (ShowBackButton)
+        {
+            <button type="button" @onclick="GoBack" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; color: #0d2137; transition: opacity 0.2s ease;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </button>
+        }
+        <h1 class="mmbr-header" style="font-family: 'Degular Display', sans-serif; margin: 0;">@Title</h1>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 0.9rem;">
+        <div class="user-avatar-placeholder">
+            <i class="fi fi-sr-user"></i>
+        </div>
+        <div style="font-family: 'Degular Display', sans-serif; display: flex; flex-direction: column; justify-content: center; gap: 2px;">
+            <div style="color: #1B4173; font-size: 1.5rem; line-height: 0.9;">@userName</div>
+            <div style="color: #6b7c93; font-size: 1.1rem; line-height: 0.9;">@userRole</div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Page Title";
+    [Parameter] public bool ShowBackButton { get; set; } = false;
+    [Parameter] public string BackUrl { get; set; } = "";
+
+    private string userName = "Unknown User";
+    private string userRole = "Guest";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userName = user.FindFirst("FullName")?.Value ?? user.Identity.Name ?? "Unknown User";
+            userRole = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("RoleName")?.Value ?? "User";
+        }
+    }
+
+    private void GoBack()
+    {
+        if (!string.IsNullOrEmpty(BackUrl))
+        {
+            Nav.NavigateTo(BackUrl);
+        }
+    }
+}

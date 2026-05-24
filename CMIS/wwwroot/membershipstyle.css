@@ -1,0 +1,180 @@
+.mmbr-header {
+  font-family: "Degular Display", sans-serif;
+  font-weight: 500;
+  font-size: 3rem;
+  color: #0d2137;
+  margin: 0;
+  line-height: 0.85;
+}
+
+.mmbr-search-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.mmbr-search-container .fi-rr-search {
+  position: absolute;
+  left: 12px;
+  color: rgba(1, 34, 77, 0.5);
+  pointer-events: none;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mmbr-searchinput {
+  height: 38px;
+  /* Match dropdown and button heights */
+  box-sizing: border-box;
+  /* Protect height calculation from padding */
+  padding: 0.4rem 1rem 0.4rem 2.2rem;
+  /* Added left padding for the search icon */
+  border: 1px solid rgba(190, 175, 175, 0.3);
+  color: #0d2137;
+  border-radius: 13px;
+  font-weight: 400;
+  font-family: "Inter", sans-serif;
+  width: 100%;
+  background: transparent;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.mmbr-searchinput:hover {
+  border-color: #01224d;
+}
+
+.mmbr-searchinput:focus {
+  border-color: #01224d;
+}
+
+.mmbr-searchinput::placeholder {
+  color: rgba(1, 34, 77, 0.5);
+  font-weight: 400;
+  font-family: "Inter", sans-serif;
+}
+
+/* --- Modern Custom Dropdown Filter --- */
+.mmbr-filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #ffffff;
+
+  /* Custom modern SVG arrow */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7c93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 1rem;
+
+  /* Border and shape to match search input */
+  border: 1px solid rgba(190, 175, 175, 0.3);
+  border-radius: 13px;
+  color: #0d2137;
+  padding: 0.4rem 2.2rem 0.4rem 1rem;
+  /* Extra right padding so text doesn't overlap the arrow */
+
+  /* Typography */
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+
+  /* Layout & Behavior */
+  cursor: pointer;
+  min-width: 180px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Hover & Focus states for premium feedback */
+.mmbr-filter-select:hover {
+  border-color: #01224d;
+}
+
+.mmbr-filter-select:focus {
+  border-color: #01224d;
+  border: 1px solid #01224d;
+}
+
+.mmbr-createbutton {
+  background: linear-gradient(to bottom, #0c3d7d, #01224d);
+  border: 1px solid rgba(190, 175, 175, 0.3);
+  color: white;
+  padding: 0.4rem 1rem;
+  border-radius: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  white-space: nowrap;
+  height: 38px;
+  /* Match dropdown and searchinput heights */
+  box-sizing: border-box;
+  /* Protect height calculation from padding */
+  display: inline-flex;
+  /* Center the text vertically inside the button */
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  /* Space between icon and text */
+  transition:
+    opacity 0.2s ease,
+    transform 0.15s ease;
+}
+
+.mmbr-createbutton i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.mmbr-createbutton:hover {
+  opacity: 0.9;
+}
+
+/* --- User Avatar Placeholder --- */
+.user-avatar-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  overflow: hidden;
+  border: 1px solid transparent;
+  /* Required for the border-box trick */
+  background:
+    linear-gradient(to bottom, #ffffff, #e4e4e4 100%) padding-box,
+    linear-gradient(to bottom, #e4e7eb 50%, #ffffff) border-box;
+}
+
+.user-avatar-placeholder .fi-sr-user {
+  background: linear-gradient(to bottom, #9ab4d4, #536e92);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 33px;
+  line-height: 1;
+  margin-bottom: -4px;
+  /* Sits shoulders flush to the bottom */
+}
+
+.debug1 {
+  border: 1px solid red;
+}
+
+
+
+/* public page here */
+
+.public-page-wrapper {
+  padding-top: 76px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}

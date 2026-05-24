@@ -1,0 +1,19 @@
+/* =============================================
+   FINANCIAL ANALYTICS — Scoped Styles
+   Aligned with Ministry Head theme
+   ============================================= */
+
+.premium-card {
+    border: 1px solid #e8ecf1 !important;
+    border-radius: 12px !important;
+    background-color: #ffffff;
+    box-shadow: none !important;
+}
+
+.report-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #0d2137;
+    margin: 0;
+}
